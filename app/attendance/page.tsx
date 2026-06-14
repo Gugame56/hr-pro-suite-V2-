@@ -476,7 +476,7 @@ export default function AttendancePage() {
                     <CalendarDays size={13} /> ปฏิทิน
                   </button>
                 </div>
-                <button onClick={fetchLogs} className="text-xs text-brandPurple hover:underline font-semibold">รีเฟรช</button>
+                <button onClick={() => fetchLogs()} className="text-xs text-brandPurple hover:underline font-semibold">รีเฟรช</button>
               </div>
             </div>
             <div className="flex-1 overflow-x-auto">

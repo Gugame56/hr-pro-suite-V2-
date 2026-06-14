@@ -1,0 +1,14 @@
+{
+  "name": "node-domexception",
+  "version": "1.0.0",
+  "description": "Local stub that re-exports the platform's native DOMException, used via npm overrides to drop the deprecated node-domexception package from the dependency tree.",
+  "main": "./index.js",
+  "module": "./index.mjs",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.js"
+    }
+  },
+  "license": "MIT"
+}
