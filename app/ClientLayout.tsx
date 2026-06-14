@@ -9,7 +9,7 @@ import {
   Heart, ShieldPlus, HandCoins, Receipt, GraduationCap, Compass, LineChart,
   Trophy, Laptop, FileText, BriefcaseBusiness, AlertTriangle, PieChart, MessageSquare,
   User, X, CornerDownLeft, ShieldCheck, CheckCircle2, Info,
-  Megaphone, Plane, Presentation
+  Megaphone, Plane, Presentation, Menu
 } from "lucide-react";
 import Link from "next/link";
 import { NAV_MODULES } from "@/lib/navModules";
@@ -26,6 +26,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [notifs, setNotifs] = useState<AppNotification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
   const unreadCount = notifs.filter((n) => !n.read).length;
 
@@ -92,6 +93,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   // Close the notification dropdown on route change.
   useEffect(() => setNotifOpen(false), [pathname]);
 
+  // Close the mobile sidebar on route change.
+  useEffect(() => setSidebarOpen(false), [pathname]);
+
   // Close the notification dropdown when clicking outside of it.
   useEffect(() => {
     if (!notifOpen) return;
@@ -122,16 +126,32 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   return (
     <div className={`${inter.className} bg-bgDark text-white h-screen flex overflow-hidden`}>
-      {/* Sidebar */}
-      <aside className="w-64 bg-cardDark border-r border-gray-800 flex flex-col h-full custom-scrollbar">
-        <div className="p-6 sticky top-0 bg-cardDark z-10 border-b border-gray-800">
-          <Link href={canManage(user.role) ? "/" : "/my-info"} className="group">
+      {/* Mobile backdrop overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — fixed drawer on mobile, inline on desktop */}
+      <aside className={`w-64 shrink-0 bg-cardDark border-r border-gray-800 flex flex-col h-full custom-scrollbar fixed top-0 left-0 z-50 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:z-auto ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="p-5 sticky top-0 bg-cardDark z-10 border-b border-gray-800 flex items-center justify-between gap-2">
+          <Link href={canManage(user.role) ? "/" : "/my-info"} className="group flex-1 min-w-0">
             <h1 className="text-xl font-bold text-white flex items-center gap-2">
-              <span className="bg-brandPurple text-white p-1 rounded-md text-sm group-hover:bg-purple-600 transition-colors">HR</span> 
+              <span className="bg-brandPurple text-white p-1 rounded-md text-sm group-hover:bg-purple-600 transition-colors shrink-0">HR</span>
               HR Pro Suite
             </h1>
             <p className="text-xs text-textMuted mt-1">NEXT-GEN HR OS</p>
           </Link>
+          {/* Close button — mobile only */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="md:hidden p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors shrink-0"
+            aria-label="ปิดเมนู"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-8 text-sm custom-scrollbar">
@@ -341,19 +361,37 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-full">
         {/* Topbar */}
-        <header className="h-16 border-b border-gray-800 flex items-center justify-between px-8 bg-bgDark shrink-0">
-          {/* Global Search trigger */}
-          <button
-            onClick={() => setPaletteOpen(true)}
-            className="group relative w-96 flex items-center gap-3 bg-cardDark border border-gray-800 rounded-full py-2 px-4 text-sm text-gray-500 hover:border-brandPurple/60 hover:text-gray-300 transition-colors"
-          >
-            <Search size={18} className="text-gray-500 group-hover:text-brandPurple transition-colors" />
-            <span className="flex-1 text-left">ค้นหาทุกอย่างในระบบ...</span>
-            <kbd className="hidden sm:flex items-center gap-0.5 text-[10px] font-semibold bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-gray-400">
-              Ctrl K
-            </kbd>
-          </button>
-          <div className="flex items-center gap-4">
+        <header className="h-16 border-b border-gray-800 flex items-center justify-between px-4 md:px-8 bg-bgDark shrink-0">
+          <div className="flex items-center gap-2">
+            {/* Hamburger — mobile only */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-2 -ml-1 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+              aria-label="เปิดเมนู"
+            >
+              <Menu size={22} />
+            </button>
+            {/* Search bar — desktop */}
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="group relative hidden md:flex w-80 lg:w-96 items-center gap-3 bg-cardDark border border-gray-800 rounded-full py-2 px-4 text-sm text-gray-500 hover:border-brandPurple/60 hover:text-gray-300 transition-colors"
+            >
+              <Search size={18} className="text-gray-500 group-hover:text-brandPurple transition-colors" />
+              <span className="flex-1 text-left">ค้นหาทุกอย่างในระบบ...</span>
+              <kbd className="hidden sm:flex items-center gap-0.5 text-[10px] font-semibold bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-gray-400">
+                Ctrl K
+              </kbd>
+            </button>
+            {/* Search icon — mobile */}
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="md:hidden p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+              aria-label="ค้นหา"
+            >
+              <Search size={20} />
+            </button>
+          </div>
+          <div className="flex items-center gap-2 md:gap-4">
             {/* Notification bell with badge + dropdown */}
             <div className="relative" ref={notifRef}>
               <button
@@ -440,7 +478,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 custom-scrollbar">
           {children}
         </div>
       </main>
