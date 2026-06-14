@@ -44,13 +44,20 @@ export default function AttendancePage() {
   const [calMode, setCalMode] = useState<CalMode>("month");
   const [cursor, setCursor] = useState(new Date()); // month/week being viewed
 
-  // Mock current employee - in a real app, this comes from auth context
-  const currentEmployeeId = "EMP001";
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
     fetchConfig();
-    fetchLogs();
+    
+    // Load session
+    const session = localStorage.getItem("hr_session");
+    if (session) {
+      const parsed = JSON.parse(session);
+      setUser(parsed);
+      fetchLogs(parsed.employeeId || parsed.id);
+    }
+
     return () => clearInterval(timer);
   }, []);
 
@@ -82,10 +89,13 @@ export default function AttendancePage() {
     }
   };
 
-  const fetchLogs = async () => {
+  const fetchLogs = async (employeeId?: string) => {
+    const targetId = employeeId || user?.employeeId || user?.id;
+    if (!targetId) return;
+
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/attendance?employeeId=${currentEmployeeId}`);
+      const res = await fetch(`/api/attendance?employeeId=${targetId}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         // Newest first.
@@ -140,6 +150,12 @@ export default function AttendancePage() {
   // ---- Submit ----
   const submit = async (action: "check-in" | "check-out") => {
     const anyMethod = config.gpsEnabled || config.qrEnabled;
+    const employeeId = user?.employeeId || user?.id;
+
+    if (!employeeId) {
+      showNotification("ไม่พบข้อมูลพนักงาน กรุณาเข้าสู่ระบบใหม่", "error");
+      return;
+    }
 
     // Client-side guards for a friendlier UX; the API enforces this too.
     if (anyMethod) {
@@ -166,7 +182,7 @@ export default function AttendancePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action,
-          employeeId: currentEmployeeId,
+          employeeId: employeeId,
           method: anyMethod ? method : undefined,
           lat: method === "gps" ? coords?.lat : undefined,
           lng: method === "gps" ? coords?.lng : undefined,
@@ -195,12 +211,18 @@ export default function AttendancePage() {
 
   // Manual self check-in (works when no GPS/QR verification is enforced).
   const manualCheckIn = async () => {
+    const employeeId = user?.employeeId || user?.id;
+    if (!employeeId) {
+      showNotification("ไม่พบข้อมูลพนักงาน กรุณาเข้าสู่ระบบใหม่", "error");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch("/api/attendance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "check-in", employeeId: currentEmployeeId, method: "manual" }),
+        body: JSON.stringify({ action: "check-in", employeeId: employeeId, method: "manual" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "ทำรายการไม่สำเร็จ");
