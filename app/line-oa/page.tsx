@@ -222,7 +222,8 @@ export default function LineOAPage() {
             {history.length === 0 ? (
               <p className="text-center text-textMuted text-sm py-10">ยังไม่มีประวัติการส่ง — ลองกด “ทดสอบส่ง Flex”</p>
             ) : (
-              <table className="w-full text-left text-sm">
+              <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full min-w-[480px] text-left text-sm">
                 <thead>
                   <tr className="bg-gray-800/30 text-textMuted text-[10px] uppercase tracking-widest">
                     <th className="px-5 py-3 font-semibold">เวลา</th>
@@ -246,6 +247,7 @@ export default function LineOAPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>
