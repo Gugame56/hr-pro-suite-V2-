@@ -323,6 +323,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   <Link href="/benefits" className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${pathname === "/benefits" ? "text-brandPurple bg-brandPurple/10" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}>
                     <Heart size={18} /> สวัสดิการ
                   </Link>
+                  <Link href="/loans" className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${pathname === "/loans" ? "text-brandPurple bg-brandPurple/10" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}>
+                    <HandCoins size={18} /> เงินกู้/เบิกล่วงหน้า
+                  </Link>
                   <Link href="/documents/employment-cert" className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${pathname === "/documents/employment-cert" ? "text-brandPurple bg-brandPurple/10" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}>
                     <FileText size={18} /> ขอใบรับรองการทำงาน
                   </Link>
