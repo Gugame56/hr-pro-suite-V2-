@@ -26,6 +26,11 @@
 | 💬 Integration           | LINE OA                              |
 
 ---
+🌐 Live Demo / Production
+
+🔗 เข้าสู่ระบบ HR Pro Suite V2:
+https://hr-pro-suite-v2-beta.vercel.app/login
+
 
 # 🌟 Core Features
 
