@@ -147,6 +147,10 @@ export default function AttendancePage() {
       : null;
   const inRange = distance != null ? distance <= config.radius : null;
 
+  const isGpsLocked = Boolean(config.gpsEnabled && method === "gps" && (locating || !coords || inRange !== true));
+  const isQrLocked = Boolean(config.qrEnabled && method === "qr" && !qrToken);
+  const isActionDisabled = submitting || isGpsLocked || isQrLocked;
+
   // ---- Submit ----
   const submit = async (action: "check-in" | "check-out") => {
     const anyMethod = config.gpsEnabled || config.qrEnabled;
@@ -209,33 +213,6 @@ export default function AttendancePage() {
     }
   };
 
-  // Manual self check-in (works when no GPS/QR verification is enforced).
-  const manualCheckIn = async () => {
-    const employeeId = user?.employeeId || user?.id;
-    if (!employeeId) {
-      showNotification("ไม่พบข้อมูลพนักงาน กรุณาเข้าสู่ระบบใหม่", "error");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/attendance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "check-in", employeeId: employeeId, method: "manual" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "ทำรายการไม่สำเร็จ");
-      setStatus("checked-in");
-      setCheckInTime(data.time);
-      showNotification("เช็คชื่อด้วยตัวเองสำเร็จ");
-      await fetchLogs();
-    } catch (err: any) {
-      showNotification(err.message, "error");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const availableMethods: VerifyMethod[] = [
     ...(config.gpsEnabled ? (["gps"] as VerifyMethod[]) : []),
@@ -399,20 +376,86 @@ export default function AttendancePage() {
               {status !== "checked-in" && status !== "checked-out" ? (
                 <button
                   onClick={() => submit("check-in")}
-                  disabled={submitting}
-                  className="w-full bg-brandPurple hover:bg-purple-600 text-white font-bold py-4 rounded-2xl transition-all shadow-lg shadow-brandPurple/20 flex items-center justify-center gap-2 group disabled:opacity-50"
+                  disabled={isActionDisabled}
+                  className={`w-full font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 group ${
+                    isActionDisabled
+                      ? "bg-gray-800 text-gray-400 border border-gray-700/60 cursor-not-allowed opacity-80"
+                      : "bg-brandPurple hover:bg-purple-600 text-white shadow-lg shadow-brandPurple/20"
+                  }`}
                 >
-                  {submitting ? <Loader2 className="animate-spin" size={20} /> : <Clock className="group-hover:rotate-12 transition-transform" size={20} />}
-                  Check In (ลงชื่อเข้างาน)
+                  {submitting ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      <span>กำลังบันทึกข้อมูล...</span>
+                    </>
+                  ) : config.gpsEnabled && method === "gps" && locating ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      <span>กำลังระบุพิกัด GPS...</span>
+                    </>
+                  ) : config.gpsEnabled && method === "gps" && !coords ? (
+                    <>
+                      <AlertCircle size={20} className="text-brandRed" />
+                      <span>กรุณาระบุพิกัด GPS ก่อนเข้างาน</span>
+                    </>
+                  ) : config.gpsEnabled && method === "gps" && inRange === false ? (
+                    <>
+                      <AlertCircle size={20} className="text-brandRed" />
+                      <span>อยู่นอกพิกัด (ห่าง {Math.round(distance || 0)} ม. / {config.radius} ม.)</span>
+                    </>
+                  ) : config.qrEnabled && method === "qr" && !qrToken ? (
+                    <>
+                      <QrCode size={20} />
+                      <span>กรุณาสแกน QR ก่อนเข้างาน</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="group-hover:rotate-12 transition-transform" size={20} />
+                      <span>Check In (ลงชื่อเข้างาน)</span>
+                    </>
+                  )}
                 </button>
               ) : status === "checked-in" ? (
                 <button
                   onClick={() => submit("check-out")}
-                  disabled={submitting}
-                  className="w-full bg-brandRed/20 hover:bg-brandRed text-brandRed hover:text-white border border-brandRed/50 font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+                  disabled={isActionDisabled}
+                  className={`w-full font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2 group border ${
+                    isActionDisabled
+                      ? "bg-gray-800 text-gray-400 border-gray-700/60 cursor-not-allowed opacity-80"
+                      : "bg-brandRed/20 hover:bg-brandRed text-brandRed hover:text-white border-brandRed/50 shadow-lg shadow-brandRed/10"
+                  }`}
                 >
-                  {submitting ? <Loader2 className="animate-spin" size={20} /> : <Clock className="group-hover:rotate-12 transition-transform" size={20} />}
-                  Check Out (ลงชื่อออกงาน)
+                  {submitting ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      <span>กำลังบันทึกข้อมูล...</span>
+                    </>
+                  ) : config.gpsEnabled && method === "gps" && locating ? (
+                    <>
+                      <Loader2 className="animate-spin" size={20} />
+                      <span>กำลังระบุพิกัด GPS...</span>
+                    </>
+                  ) : config.gpsEnabled && method === "gps" && !coords ? (
+                    <>
+                      <AlertCircle size={20} className="text-brandRed" />
+                      <span>กรุณาระบุพิกัด GPS ก่อนออกงาน</span>
+                    </>
+                  ) : config.gpsEnabled && method === "gps" && inRange === false ? (
+                    <>
+                      <AlertCircle size={20} className="text-brandRed" />
+                      <span>อยู่นอกพิกัด (ห่าง {Math.round(distance || 0)} ม. / {config.radius} ม.)</span>
+                    </>
+                  ) : config.qrEnabled && method === "qr" && !qrToken ? (
+                    <>
+                      <QrCode size={20} />
+                      <span>กรุณาสแกน QR ก่อนออกงาน</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clock className="group-hover:rotate-12 transition-transform" size={20} />
+                      <span>Check Out (ลงชื่อออกงาน)</span>
+                    </>
+                  )}
                 </button>
               ) : (
                 <div className="w-full bg-gray-800/50 text-gray-400 py-4 rounded-2xl text-center font-bold text-sm border border-gray-700">
@@ -420,17 +463,6 @@ export default function AttendancePage() {
                 </div>
               )}
             </div>
-
-            {/* Manual self check-in */}
-            {status !== "checked-in" && status !== "checked-out" && (
-              <button
-                onClick={manualCheckIn}
-                disabled={submitting}
-                className="mt-3 w-full text-xs font-semibold text-textMuted hover:text-white border border-gray-800 hover:border-brandPurple/50 rounded-xl py-2.5 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <UserCheck size={14} /> เช็คชื่อด้วยตัวเอง (Manual)
-              </button>
-            )}
 
             {checkInTime && (
               <p className="mt-6 text-sm text-textMuted">

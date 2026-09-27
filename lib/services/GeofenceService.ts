@@ -51,31 +51,32 @@ export class GeofenceService {
 
   /** Verify attendance check-in/out against config (GPS/QR). */
   verifyAttendance(cfg: AttendanceConfig, input: VerifyInput): VerifyResult {
+    // If neither GPS nor QR is enabled, allow free check-in
     if (!cfg.gpsEnabled && !cfg.qrEnabled) return { ok: true };
 
-    const { method } = input;
+    const method = input.method || (cfg.gpsEnabled ? 'gps' : 'qr');
 
-    if (method === 'gps') {
-      if (!cfg.gpsEnabled) return { ok: false, error: 'การยืนยันด้วย GPS ถูกปิดอยู่' };
-      if (input.lat == null || input.lng == null || Number.isNaN(input.lat) || Number.isNaN(input.lng)) {
-        return { ok: false, error: 'ไม่พบตำแหน่ง GPS กรุณาอนุญาตการเข้าถึงตำแหน่ง' };
+    if (cfg.gpsEnabled && method !== 'qr') {
+      if (input.lat == null || input.lng == null || Number.isNaN(Number(input.lat)) || Number.isNaN(Number(input.lng))) {
+        return { ok: false, error: 'ระบบบังคับตรวจพิกัด GPS: ไม่พบตำแหน่ง GPS กรุณาเปิด Location และอนุญาตการเข้าถึงตำแหน่ง' };
       }
       if (Number.isNaN(cfg.lat) || Number.isNaN(cfg.lng)) {
-        return { ok: false, error: 'ผู้ดูแลระบบยังไม่ได้ตั้งค่าพิกัดออฟฟิศ' };
+        return { ok: false, error: 'ผู้ดูแลระบบยังไม่ได้ตั้งค่าพิกัดออฟฟิศในระบบ' };
       }
-      const distance = this.haversineMeters(input.lat, input.lng, cfg.lat, cfg.lng);
+      const lat = Number(input.lat);
+      const lng = Number(input.lng);
+      const distance = this.haversineMeters(lat, lng, cfg.lat, cfg.lng);
       if (distance > cfg.radius) {
         return {
           ok: false,
           distance,
-          error: `อยู่นอกพื้นที่ออฟฟิศ (ห่าง ${Math.round(distance)} ม. / รัศมีที่อนุญาต ${cfg.radius} ม.)`,
+          error: `อยู่นอกพื้นที่ที่กำหนด (คุณอยู่ห่าง ${Math.round(distance)} เมตร / รัศมีที่อนุญาต ${cfg.radius} เมตร) — ไม่อนุญาตให้ลงเวลา`,
         };
       }
       return { ok: true, distance };
     }
 
-    if (method === 'qr') {
-      if (!cfg.qrEnabled) return { ok: false, error: 'การยืนยันด้วย QR ถูกปิดอยู่' };
+    if (method === 'qr' && cfg.qrEnabled) {
       if (!cfg.qrToken) return { ok: false, error: 'ผู้ดูแลระบบยังไม่ได้ตั้งค่า QR ของออฟฟิศ' };
       if ((input.qrToken || '').trim() !== cfg.qrToken.trim()) {
         return { ok: false, error: 'QR Code ไม่ถูกต้องหรือหมดอายุ' };
@@ -83,7 +84,7 @@ export class GeofenceService {
       return { ok: true };
     }
 
-    return { ok: false, error: 'กรุณาเลือกวิธียืนยันการลงเวลา (GPS หรือ QR)' };
+    return { ok: false, error: 'การลงเวลาต้องยืนยันพิกัด GPS ตามที่กำหนดเท่านั้น' };
   }
 }
 
