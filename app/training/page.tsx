@@ -1,320 +1,426 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { GraduationCap, PlayCircle, Clock, BookOpen, Star, CheckCircle2, Loader2, Search, Plus, Pencil, Trash2, X } from "lucide-react";
-import { useCanManage } from "@/lib/useCanManage";
-import { Kpi, DonutPanel, type Segment } from "@/lib/dashboardKit";
+import React, { useState, useEffect, useRef } from "react";
+import { 
+  PlayCircle, 
+  Upload, 
+  CheckCircle, 
+  Film, 
+  X, 
+  Plus, 
+  AlertCircle 
+} from "lucide-react";
+
+interface Training {
+  id: string;
+  title: string;
+  description: string;
+  videoUrl: string;
+  duration: string;
+  progress: number;
+  isCompleted: boolean;
+}
 
 export default function TrainingPage() {
-  // Admin/Manager only may add/edit/delete courses; employees browse read-only.
-  const canManage = useCanManage();
-  const [courses, setCourses] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<any>(null);
-  const [formData, setFormData] = useState({
-    title: "",
-    category: "",
-    progress: 0,
-    duration: "",
-    rating: 5.0
+  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // สถานะผู้ใช้งานปัจจุบัน
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: string; name: string }>({
+    id: "emp-01",
+    role: "user",
+    name: "พนักงาน",
   });
-  const [notification, setNotification] = useState<any>(null);
 
-  const currentEmployeeId = "EMP001";
+  // สถานะสำหรับฟอร์มอัปโหลด
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  // สถานะสำหรับเครื่องเล่นวิดีโอ
+  const [activeTraining, setActiveTraining] = useState<Training | null>(null);
+  const [currentProgress, setCurrentProgress] = useState(0);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const canUpload = currentUser.role === "admin" || currentUser.role === "manager";
+
+  // โหลดข้อมูลผู้ใช้จาก Local Storage
   useEffect(() => {
-    fetchCourses();
+    const savedUser = localStorage.getItem("hr_session") || localStorage.getItem("user");
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        setCurrentUser({
+          id: parsed.id || parsed.employeeId || "emp-01",
+          role: (parsed.role || "user").toLowerCase(),
+          name: parsed.name || "พนักงาน",
+        });
+      } catch (e) {
+        console.error("Failed to parse user data", e);
+      }
+    }
   }, []);
 
-  const fetchCourses = async () => {
-    setIsLoading(true);
+  // ดึงรายการหลักสูตร
+  const fetchTrainings = async () => {
     try {
-      // Training is a shared course catalogue — show every course to everyone,
-      // not just the ones tagged to the current employee.
-      const res = await fetch(`/api/training`);
+      setLoading(true);
+      const res = await fetch(`/api/training?userId=${currentUser.id}`);
       const data = await res.json();
-      if (Array.isArray(data)) setCourses(data);
+      if (data.trainings) {
+        setTrainings(data.trainings);
+      }
     } catch (err) {
-      showNotification("Error fetching courses", "error");
+      console.error(err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const showNotification = (message: any, type = "success") => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
-  };
+  useEffect(() => {
+    fetchTrainings();
+  }, [currentUser.id]);
 
-  // Bucket a course by its progress value.
-  const courseStatus = (p: number) => (p >= 100 ? "completed" : p > 0 ? "in_progress" : "not_started");
-
-  const filteredCourses = useMemo(() => {
-    const q = searchTerm.toLowerCase();
-    return courses.filter(c => {
-      const matchesSearch = (c.title || "").toLowerCase().includes(q) || (c.category || "").toLowerCase().includes(q);
-      const matchesStatus = statusFilter === "all" || courseStatus(parseInt(c.progress) || 0) === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [courses, searchTerm, statusFilter]);
-
-  const stats = useMemo(() => {
-    const completed = courses.filter(c => (parseInt(c.progress) || 0) >= 100).length;
-    const inProgress = courses.filter(c => { const p = parseInt(c.progress) || 0; return p > 0 && p < 100; }).length;
-    const avgRating = courses.length
-      ? courses.reduce((s, c) => s + (parseFloat(c.rating) || 0), 0) / courses.length
-      : 0;
-    return { total: courses.length, completed, inProgress, avgRating };
-  }, [courses]);
-
-  const byStatus: Segment[] = useMemo(() => {
-    const buckets = { completed: 0, in_progress: 0, not_started: 0 };
-    for (const c of courses) buckets[courseStatus(parseInt(c.progress) || 0)]++;
-    return [
-      { label: "เรียนจบแล้ว", value: buckets.completed, hex: "#10b981" },
-      { label: "กำลังเรียน", value: buckets.in_progress, hex: "#8b5cf6" },
-      { label: "ยังไม่เริ่ม", value: buckets.not_started, hex: "#6b7280" },
-    ].filter(s => s.value > 0);
-  }, [courses]);
-
-  const openAddModal = () => {
-    setEditingCourse(null);
-    setFormData({ title: "", category: "", progress: 0, duration: "", rating: 5.0 });
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (course: any) => {
-    setEditingCourse(course);
-    setFormData({
-      title: course.title || "",
-      category: course.category || "",
-      progress: course.progress || 0,
-      duration: course.duration || "",
-      rating: course.rating || 5.0
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleSave = async (e: any) => {
+  // ฟังก์ชันอัปโหลดวิดีโอและสร้างหลักสูตรใหม่
+  const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
-    const method = editingCourse ? 'PATCH' : 'POST';
-    const body = editingCourse ? { id: editingCourse.id, ...formData } : { ...formData, employeeId: currentEmployeeId };
+    if (!selectedFile || !title) {
+      alert("กรุณากรอกชื่อหลักสูตรและแนบไฟล์วิดีโอ");
+      return;
+    }
 
     try {
-      const res = await fetch('/api/training', {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+      setUploading(true);
+
+      // 1. อัปโหลดไฟล์วิดีโอ
+      const uploadFormData = new FormData();
+      uploadFormData.append("video", selectedFile);
+      uploadFormData.append("role", currentUser.role);
+
+      const uploadRes = await fetch("/api/training/upload", {
+        method: "POST",
+        body: uploadFormData,
       });
 
-      if (!res.ok) throw new Error('Save failed');
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) {
+        throw new Error(uploadData.error || "เกิดข้อผิดพลาดในการอัปโหลดวิดีโอ");
+      }
 
-      showNotification(editingCourse ? "อัปเดตหลักสูตรสำเร็จ" : "เพิ่มหลักสูตรสำเร็จ");
-      await fetchCourses();
-      setIsModalOpen(false);
-    } catch (err) {
-      showNotification("เกิดข้อผิดพลาดในการบันทึก", "error");
+      // 2. บันทึกข้อมูลหลักสูตร
+      const courseRes = await fetch("/api/training", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          description,
+          videoUrl: uploadData.videoUrl,
+          duration: "หลักสูตรวิดีโอ",
+          role: currentUser.role,
+        }),
+      });
+
+      if (!courseRes.ok) {
+        const errorData = await courseRes.json();
+        throw new Error(errorData.error || "สร้างหลักสูตรไม่สำเร็จ");
+      }
+
+      // รีเซ็ตสถานะฟอร์ม
+      setTitle("");
+      setDescription("");
+      setSelectedFile(null);
+      setShowUploadModal(false);
+      fetchTrainings();
+      alert("อัปโหลดและเพิ่มหลักสูตรเรียบร้อยแล้ว");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
-  const handleDelete = async (id: any) => {
-    if (!confirm("คุณแน่ใจหรือไม่ว่าต้องการลบหลักสูตรนี้?")) return;
+  const handleOpenVideo = (item: Training) => {
+    setActiveTraining(item);
+    setCurrentProgress(item.progress || 0);
+  };
 
+  // ตรวจจับและอัปเดตเปอร์เซ็นต์ระหว่างเล่นวิดีโอ
+  const handleTimeUpdate = () => {
+    if (!videoRef.current) return;
+    const duration = videoRef.current.duration;
+    const currentTime = videoRef.current.currentTime;
+
+    if (duration > 0) {
+      const calculatedPct = Math.min(100, Math.round((currentTime / duration) * 100));
+      setCurrentProgress((prev) => {
+        const updated = Math.max(prev, calculatedPct);
+        // บันทึกไปยัง Server ทุกๆ 5% หรือเมื่อครบ 100%
+        if (updated > prev && (updated % 5 === 0 || updated === 100)) {
+          saveProgress(updated);
+        }
+        return updated;
+      });
+    }
+  };
+
+  // เมื่อดูวิดีโอจบ ให้ปรับเป็น 100% ทันที
+  const handleVideoEnded = () => {
+    setCurrentProgress(100);
+    saveProgress(100);
+  };
+
+  // บันทึกความคืบหน้าไปยัง Backend
+  const saveProgress = async (pct: number) => {
+    if (!activeTraining) return;
     try {
-      const res = await fetch(`/api/training?id=${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Delete failed');
+      await fetch("/api/training", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          trainingId: activeTraining.id,
+          progress: pct,
+        }),
+      });
 
-      showNotification("ลบหลักสูตรสำเร็จ");
-      await fetchCourses();
-    } catch (err) {
-      showNotification("เกิดข้อผิดพลาดในการลบ", "error");
+      setTrainings((prev) =>
+        prev.map((t) =>
+          t.id === activeTraining.id
+            ? { ...t, progress: Math.max(t.progress, pct), isCompleted: pct >= 100 }
+            : t
+        )
+      );
+    } catch (error) {
+      console.error("Error saving progress:", error);
     }
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 relative">
-      {/* Notification Toast */}
-      {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white text-sm font-medium animate-in slide-in-from-right ${
-          notification.type === 'error' ? 'bg-red-500' : 'bg-brandGreen'
-        }`}>
-          {notification.message}
-        </div>
-      )}
-
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-gray-200 dark:border-gray-800 pb-5">
         <div>
-          <h2 className="text-2xl font-bold text-white">อบรม (Training & Development)</h2>
-          <p className="text-textMuted text-sm">พัฒนาทักษะและเรียนรู้สิ่งใหม่เพื่อการเติบโตในสายอาชีพ</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ระบบอบรมพนักงาน (E-Training)</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            สถานะของคุณ: <span className="font-semibold uppercase text-indigo-600 dark:text-indigo-400">{currentUser.role}</span>
+            {canUpload ? " (มีสิทธิ์อัปโหลดวิดีโอ)" : " (โหมดรับชมและบันทึกการเรียนรู้)"}
+          </p>
         </div>
-        {canManage && (
+
+        {canUpload && (
           <button
-            onClick={openAddModal}
-            className="flex items-center gap-2 bg-brandPurple hover:bg-brandPurple/90 text-white px-4 py-2 rounded-lg transition-all font-medium shadow-lg shadow-brandPurple/20"
+            onClick={() => setShowUploadModal(true)}
+            className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition"
           >
-            <Plus size={18} />
-            เพิ่มหลักสูตร
+            <Plus className="w-5 h-5" />
+            อัปโหลดคลิปอบรมใหม่
           </button>
         )}
       </div>
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Kpi icon={<BookOpen size={22} />} tint="bg-blue-500/10 text-blue-500" label="หลักสูตรทั้งหมด" value={stats.total} sub="หลักสูตร" />
-        <Kpi icon={<CheckCircle2 size={22} />} tint="bg-brandGreen/10 text-brandGreen" label="เรียนจบแล้ว" value={stats.completed} sub="หลักสูตร" />
-        <Kpi icon={<PlayCircle size={22} />} tint="bg-brandPurple/10 text-brandPurple" label="กำลังเรียน" value={stats.inProgress} sub="หลักสูตร" />
-        <Kpi icon={<Star size={22} />} tint="bg-amber-500/10 text-amber-500" label="คะแนนรีวิวเฉลี่ย" value={stats.avgRating.toFixed(1)} sub="จากเต็ม 5.0" />
-      </div>
-
-      {/* Distribution */}
-      <DonutPanel title="สถานะความคืบหน้าการเรียน" subtitle="จำนวนหลักสูตรแยกตามสถานะ" segments={byStatus} centerLabel="หลักสูตร" />
-
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-          <input
-            type="text"
-            placeholder="ค้นหาชื่อหลักสูตร, หมวดหมู่..."
-            className="w-full bg-cardDark border border-gray-800 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-brandPurple text-white transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {/* Training Cards Grid */}
+      {loading ? (
+        <div className="text-center py-16 text-gray-500">กำลังโหลดหลักสูตร...</div>
+      ) : trainings.length === 0 ? (
+        <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+          <Film className="w-12 h-12 mx-auto text-gray-400 mb-3" />
+          <p className="text-gray-600 dark:text-gray-300 font-medium">ยังไม่มีหลักสูตรการอบรมในระบบ</p>
+          {canUpload && <p className="text-sm text-gray-400 mt-1">กดปุ่ม "อัปโหลดคลิปอบรมใหม่" เพื่อเพิ่มวิดีโอ</p>}
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-cardDark border border-gray-800 rounded-xl py-2 px-3 text-sm text-white focus:outline-none focus:border-brandPurple">
-          <option value="all">ทุกสถานะ</option>
-          <option value="completed">เรียนจบแล้ว</option>
-          <option value="in_progress">กำลังเรียน</option>
-          <option value="not_started">ยังไม่เริ่ม</option>
-        </select>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {trainings.map((item) => (
+            <div
+              key={item.id}
+              className="bg-white dark:bg-cardDark border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden flex flex-col hover:border-indigo-300 dark:hover:border-indigo-500/50 transition"
+            >
+              <div className="relative h-44 bg-slate-900 flex items-center justify-center">
+                <Film className="w-12 h-12 text-slate-500" />
+                <button
+                  onClick={() => handleOpenVideo(item)}
+                  className="absolute inset-0 bg-black/40 hover:bg-black/20 flex items-center justify-center text-white transition group"
+                >
+                  <PlayCircle className="w-14 h-14 group-hover:scale-110 transition drop-shadow-md text-white" />
+                </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {isLoading ? (
-          <div className="lg:col-span-2 bg-cardDark border border-gray-800 rounded-2xl p-20 flex flex-col items-center justify-center">
-            <Loader2 className="animate-spin text-brandPurple mb-4" size={40} />
-            <p className="text-textMuted animate-pulse">กำลังโหลดหลักสูตร...</p>
-          </div>
-        ) : filteredCourses.length === 0 ? (
-          <div className="lg:col-span-2 bg-cardDark border border-gray-800 rounded-2xl p-20 text-center">
-            <p className="text-textMuted">ไม่พบหลักสูตรการอบรม</p>
-          </div>
-        ) : (
-          filteredCourses.map((course, i) => {
-            const progress = parseInt(course.progress) || 0;
-            const done = progress >= 100;
-            return (
-              <div key={course.id || i} className="bg-cardDark border border-gray-800 rounded-2xl p-6 hover:border-brandPurple/50 transition-all group relative">
-                <div className="flex gap-5">
-                  <div className="w-20 h-20 rounded-2xl bg-gray-800 flex items-center justify-center shrink-0 group-hover:bg-brandPurple/10 transition-colors relative overflow-hidden">
-                    <GraduationCap className="text-gray-600 group-hover:text-brandPurple transition-colors" size={36} />
-                    {done && (
-                      <div className="absolute top-0 right-0 bg-brandGreen text-white p-1 rounded-bl-lg">
-                        <Star size={10} fill="currentColor" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded bg-gray-800 text-textMuted text-[10px] font-bold uppercase tracking-wider">
-                        {course.category}
-                      </span>
-                      <div className="flex items-center gap-1 text-textMuted text-[10px]">
-                        <Clock size={10} />
-                        {course.duration}
-                      </div>
-                    </div>
-                    <h3 className="text-white font-bold group-hover:text-brandPurple transition-colors mb-3 leading-tight">{course.title}</h3>
+                {item.progress >= 100 && (
+                  <span className="absolute top-3 right-3 bg-emerald-600 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1 shadow">
+                    <CheckCircle className="w-3.5 h-3.5" /> ผ่านการอบรม (100%)
+                  </span>
+                )}
+              </div>
 
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[10px]">
-                        <span className="text-textMuted font-medium">ความคืบหน้า</span>
-                        <span className="text-white font-bold">{progress}%</span>
-                      </div>
-                      <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-1000 ${done ? 'bg-brandGreen' : 'bg-brandPurple'}`}
-                          style={{ width: `${progress}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
+              <div className="p-5 flex-1 flex flex-col justify-between">
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white text-lg line-clamp-1">{item.title}</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 line-clamp-2">
+                    {item.description || "ไม่มีรายละเอียดเพิ่มเติม"}
+                  </p>
                 </div>
-                <div className="mt-5 pt-4 border-t border-gray-800 flex justify-between items-center">
-                  <div className="flex items-center gap-1 text-brandOrange">
-                    <Star size={14} fill="currentColor" />
-                    <span className="text-xs font-bold text-white">{course.rating}</span>
+
+                <div className="mt-5 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-gray-600 dark:text-gray-400">ความคืบหน้าในการดู</span>
+                    <span className={item.progress >= 100 ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-indigo-600 dark:text-indigo-400"}>
+                      {item.progress}%
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {canManage && (
-                      <>
-                        <button onClick={() => openEditModal(course)} className="p-2 text-gray-400 hover:text-white transition-colors">
-                          <Pencil size={16} />
-                        </button>
-                        <button onClick={() => handleDelete(course.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-                          <Trash2 size={16} />
-                        </button>
-                      </>
-                    )}
-                    <button className="flex items-center gap-2 text-sm font-bold text-brandPurple hover:text-purple-400 transition-colors group/btn ml-2">
-                      {done ? "ทบทวน" : progress > 0 ? "เรียนต่อ" : "เริ่มเรียน"}
-                      <PlayCircle className="group-hover/btn:translate-x-1 transition-transform" size={18} />
-                    </button>
+                  <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className={`h-2.5 rounded-full transition-all duration-300 ${
+                        item.progress >= 100 ? "bg-emerald-500" : "bg-indigo-600"
+                      }`}
+                      style={{ width: `${item.progress}%` }}
+                    />
                   </div>
+
+                  <button
+                    onClick={() => handleOpenVideo(item)}
+                    className="w-full mt-3 py-2 px-4 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 text-sm font-medium transition flex items-center justify-center gap-2"
+                  >
+                    <PlayCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    {item.progress === 0 ? "เริ่มเรียน" : item.progress >= 100 ? "ดูซ้ำอีกครั้ง" : "เรียนต่อ"}
+                  </button>
                 </div>
               </div>
-            );
-          })
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* Modal Form */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-cardDark border border-gray-800 w-full max-w-md rounded-2xl shadow-2xl animate-in zoom-in duration-200">
-            <div className="flex justify-between items-center p-6 border-b border-gray-800">
-              <h3 className="text-xl font-bold text-white">
-                {editingCourse ? "แก้ไขหลักสูตร" : "เพิ่มหลักสูตรการอบรม"}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-1 text-gray-400 hover:text-white transition-colors">
-                <X size={20} />
+      {/* Video Modal */}
+      {activeTraining && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-cardDark rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-lg">{activeTraining.title}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">ระบบจะทำการบันทึกเปอร์เซ็นต์การดูอัตโนมัติ</p>
+              </div>
+              <button
+                onClick={() => {
+                  setActiveTraining(null);
+                  fetchTrainings();
+                }}
+                className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-1 rounded-lg"
+              >
+                <X className="w-6 h-6" />
               </button>
             </div>
-            <form onSubmit={handleSave} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-textMuted text-xs font-semibold mb-1 uppercase">ชื่อหลักสูตร</label>
-                  <input required type="text" className="w-full bg-cardDark border border-gray-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-brandPurple text-white" value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} placeholder="เช่น Advanced React Patterns" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-textMuted text-xs font-semibold mb-1 uppercase">หมวดหมู่</label>
-                    <input required type="text" className="w-full bg-cardDark border border-gray-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-brandPurple text-white" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} placeholder="เช่น Technical" />
-                  </div>
-                  <div>
-                    <label className="block text-textMuted text-xs font-semibold mb-1 uppercase">ระยะเวลา (ชม.)</label>
-                    <input required type="text" className="w-full bg-cardDark border border-gray-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-brandPurple text-white" value={formData.duration} onChange={(e) => setFormData({...formData, duration: e.target.value})} placeholder="เช่น 5h 30m" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-textMuted text-xs font-semibold mb-1 uppercase">ความคืบหน้า (%)</label>
-                    <input required type="number" min="0" max="100" className="w-full bg-cardDark border border-gray-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-brandPurple text-white" value={formData.progress} onChange={(e) => setFormData({...formData, progress: parseInt(e.target.value) || 0})} />
-                  </div>
-                  <div>
-                    <label className="block text-textMuted text-xs font-semibold mb-1 uppercase">คะแนนรีวิว</label>
-                    <input required type="number" step="0.1" min="0" max="5" className="w-full bg-cardDark border border-gray-800 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-brandPurple text-white" value={formData.rating} onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value) || 0})} />
-                  </div>
-                </div>
+
+            <div className="bg-black flex-1 relative flex items-center justify-center">
+              <video
+                ref={videoRef}
+                src={activeTraining.videoUrl}
+                controls
+                autoPlay
+                onTimeUpdate={handleTimeUpdate}
+                onEnded={handleVideoEnded}
+                className="w-full max-h-[60vh] object-contain"
+              />
+            </div>
+
+            <div className="p-5 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">เปอร์เซ็นต์การรับชม</span>
+                <span
+                  className={`text-base font-extrabold ${
+                    currentProgress >= 100 ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-400"
+                  }`}
+                >
+                  {currentProgress}% {currentProgress >= 100 && "✓ ครบ 100% แล้ว"}
+                </span>
               </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">ยกเลิก</button>
-                <button type="submit" className="bg-brandPurple hover:bg-brandPurple/90 text-white px-6 py-2 rounded-lg text-sm font-medium transition-all">
-                  {editingCourse ? "บันทึกการแก้ไข" : "บันทึกหลักสูตร"}
+              <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-3 overflow-hidden">
+                <div
+                  className={`h-3 transition-all duration-200 ${
+                    currentProgress >= 100 ? "bg-emerald-500" : "bg-indigo-600"
+                  }`}
+                  style={{ width: `${currentProgress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Modal (เฉพาะ Manager / Admin) */}
+      {showUploadModal && canUpload && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-cardDark rounded-xl shadow-xl w-full max-w-lg p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-3">
+              <h3 className="font-bold text-gray-900 dark:text-white text-lg flex items-center gap-2">
+                <Upload className="w-5 h-5 text-indigo-600 dark:text-indigo-400" /> อัปโหลดคลิปอบรมใหม่
+              </h3>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCourse} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  ชื่อหลักสูตร <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="เช่น มาตรฐานการทำงานและการรักษาความปลอดภัย"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">รายละเอียดหลักสูตร</label>
+                <textarea
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="คำอธิบายสั้นๆ เกี่ยวกับเนื้อหาหลักสูตร"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  ไฟล์วิดีโอ (MP4, WebM, MOV) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="file"
+                  required
+                  accept="video/*"
+                  onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
+                  className="w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 dark:file:bg-indigo-900/30 file:text-indigo-700 dark:file:text-indigo-300 hover:file:bg-indigo-100 cursor-pointer"
+                />
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 p-3 rounded-lg flex items-start gap-2 text-xs text-amber-800 dark:text-amber-300">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <span>ฟังก์ชันนี้เปิดให้เฉพาะ Manager และ Admin เท่านั้น พนักงานระดับทั่วไปจะไม่เห็นปุ่มนี้</span>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => setShowUploadModal(false)}
+                  className="px-4 py-2 border dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 shadow"
+                >
+                  {uploading ? "กำลังอัปโหลดคลิป..." : "บันทึกและเผยแพร่"}
                 </button>
               </div>
             </form>
