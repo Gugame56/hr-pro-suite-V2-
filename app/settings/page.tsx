@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   Loader2, Save, Building2, Users as UsersIcon, Clock, MapPin, Palette,
   Navigation, QrCode, RefreshCw, Camera, ShieldCheck, Plus, Check, Search,
+  Download, Printer, Copy,
 } from "lucide-react";
 
 type Settings = {
@@ -582,49 +583,182 @@ function GeofenceMap({ lat, lng, radius, onChange }: {
   return <div ref={containerRef} className="w-full h-72 rounded-2xl overflow-hidden border border-gray-800 z-0" />;
 }
 
-// ---- QR code generator (CDN, renders locally; token never leaves the browser) ----
-let qrPromise: Promise<any> | null = null;
-function loadQrLib(): Promise<any> {
-  if (typeof window === "undefined") return Promise.resolve(null);
-  if ((window as any).QRCode) return Promise.resolve((window as any).QRCode);
-  if (qrPromise) return qrPromise;
-  qrPromise = new Promise((resolve) => {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js";
-    script.onload = () => resolve((window as any).QRCode);
-    document.body.appendChild(script);
-  });
-  return qrPromise;
-}
-
+// ---- QR code generator (bundled qrcode with fallback) ----
 function OfficeQr({ token, onRegenerate }: { token: string; onRegenerate: () => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [qrUrl, setQrUrl] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
-    loadQrLib().then((QRCode) => {
-      if (QRCode && canvasRef.current) QRCode.toCanvas(canvasRef.current, token, { width: 180, margin: 1 }, () => {});
-    });
+    if (!token) {
+      setQrUrl("");
+      return;
+    }
+    setLoading(true);
+
+    let isMounted = true;
+
+    // Generate QR Code using installed qrcode module with fallback
+    import("qrcode")
+      .then((mod) => {
+        const QRCode = mod.default || mod;
+        return QRCode.toDataURL(token, {
+          width: 260,
+          margin: 2,
+          errorCorrectionLevel: "M",
+          color: {
+            dark: "#0F172A",
+            light: "#FFFFFF",
+          },
+        });
+      })
+      .then((url) => {
+        if (isMounted) {
+          setQrUrl(url);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn("Client QRCode failed, using fallback:", err);
+        if (isMounted) {
+          setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=${encodeURIComponent(token)}`);
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [token]);
+
+  const handleCopy = () => {
+    if (!token) return;
+    navigator.clipboard.writeText(token);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownload = () => {
+    if (!qrUrl) return;
+    const a = document.createElement("a");
+    a.href = qrUrl;
+    a.download = `office-attendance-qr-${token}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handlePrint = () => {
+    if (!qrUrl) return;
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Office Attendance QR Code - ${token}</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 40px 20px; background: #fff; color: #1e293b; }
+            .card { border: 2px dashed #94a3b8; border-radius: 20px; padding: 32px; display: inline-block; max-width: 360px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+            img { width: 240px; height: 240px; display: block; margin: 16px auto; }
+            h2 { margin: 0 0 8px; font-size: 22px; color: #0f172a; }
+            p { margin: 0 0 16px; color: #64748b; font-size: 14px; }
+            .token { font-family: monospace; font-size: 13px; font-weight: bold; background: #f1f5f9; padding: 6px 12px; border-radius: 6px; display: inline-block; color: #334155; }
+            .note { font-size: 11px; color: #94a3b8; margin-top: 16px; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <h2>QR Code ลงเวลาทำงาน</h2>
+            <p>กรุณาสแกนผ่านระบบ HR Pro Suite เพื่อลงเวลาเข้า-ออกงาน</p>
+            <img src="${qrUrl}" alt="QR Code" />
+            <div class="token">${token}</div>
+            <div class="note">พิมพ์จากระบบ HR Pro Suite</div>
+          </div>
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `);
+    win.document.close();
+  };
 
   return (
     <div className="flex flex-col sm:flex-row gap-5 items-center">
-      <div className="bg-white p-2 rounded-xl shrink-0">
-        {token ? (
-          <canvas ref={canvasRef} width={180} height={180} />
+      <div className="bg-white p-3 rounded-2xl shrink-0 shadow-md border border-gray-200 flex items-center justify-center min-w-[200px] min-h-[200px]">
+        {loading ? (
+          <div className="w-[180px] h-[180px] flex flex-col items-center justify-center gap-2 text-gray-500 text-xs">
+            <Loader2 className="animate-spin text-brandPurple" size={28} />
+            <span className="font-semibold">กำลังสร้าง QR Code...</span>
+          </div>
+        ) : qrUrl ? (
+          <img
+            src={qrUrl}
+            alt="Office Attendance QR"
+            className="w-[180px] h-[180px] object-contain rounded-lg"
+          />
         ) : (
-          <div className="w-[180px] h-[180px] flex items-center justify-center text-gray-400 text-xs text-center">ยังไม่มีรหัส QR<br />กดสร้างรหัส</div>
+          <div className="w-[180px] h-[180px] flex items-center justify-center text-gray-400 text-xs text-center leading-relaxed">
+            ยังไม่มีรหัส QR<br />กดปุ่ม "สร้างรหัส QR"
+          </div>
         )}
       </div>
-      <div className="space-y-3 flex-1">
+
+      <div className="space-y-3 flex-1 w-full">
         <div>
-          <p className="text-white font-bold text-sm flex items-center gap-2"><QrCode size={16} className="text-brandPurple" /> QR Code สำหรับลงเวลา</p>
-          <p className="text-textMuted text-xs mt-1 leading-relaxed">พิมพ์ QR นี้ติดที่ออฟฟิศ พนักงานสแกนเพื่อยืนยันการลงเวลา หากต้องการยกเลิกรหัสเดิม ให้สร้างรหัสใหม่</p>
+          <p className="text-white font-bold text-sm flex items-center gap-2">
+            <QrCode size={16} className="text-brandPurple" /> QR Code สำหรับลงเวลา (Geofence)
+          </p>
+          <p className="text-textMuted text-xs mt-1 leading-relaxed">
+            พิมพ์หรือดาวน์โหลด QR Code นี้ติดไว้ที่ออฟฟิศ เพื่อให้พนักงานใช้สแกนยืนยันการลงเวลาเข้า-ออกงาน
+          </p>
         </div>
-        <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-3 py-2 text-textMuted text-xs font-mono break-all">{token || "—"}</div>
-        <button type="button" onClick={onRegenerate} className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-lg font-semibold">
-          <RefreshCw size={14} /> สร้างรหัส QR ใหม่
-        </button>
+
+        <div className="flex items-center gap-2">
+          <div className="bg-gray-900/50 border border-gray-800 rounded-lg px-3 py-2 text-textMuted text-xs font-mono break-all flex-1">
+            {token || "ยังไม่มีรหัส"}
+          </div>
+          {token && (
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 text-textMuted hover:text-white px-3 py-2 rounded-lg font-medium transition-colors"
+            >
+              <Copy size={13} />
+              {copied ? "คัดลอกแล้ว" : "คัดลอก"}
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onRegenerate}
+            className="flex items-center gap-1.5 text-xs bg-brandPurple hover:bg-purple-600 text-white px-3.5 py-2 rounded-lg font-semibold shadow-sm transition-colors"
+          >
+            <RefreshCw size={14} /> {token ? "สร้างรหัส QR ใหม่" : "สร้างรหัส QR"}
+          </button>
+
+          {qrUrl && (
+            <>
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-lg font-semibold transition-colors border border-gray-700"
+              >
+                <Download size={14} /> ดาวน์โหลดภาพ QR
+              </button>
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="flex items-center gap-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-lg font-semibold transition-colors border border-gray-700"
+              >
+                <Printer size={14} /> พิมพ์ป้าย QR
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
