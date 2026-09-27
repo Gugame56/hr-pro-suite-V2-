@@ -1,0 +1,47 @@
+[
+  {
+    "id": "doc_company_rules",
+    "title": "คู่มือและข้อบังคับการทำงานประจำปี",
+    "category": "ระเบียบบริษัท",
+    "targetType": "all",
+    "targetDepartment": "",
+    "targetEmployeeId": "",
+    "targetEmployeeName": "ทุกคน",
+    "fileName": "company-regulations-2026.pdf",
+    "fileUrl": "/uploads/documents/company-regulations-2026.pdf",
+    "fileSize": "1.25 MB",
+    "uploadedBy": "HR Manager",
+    "acknowledgedBy": [],
+    "createdAt": "2026-01-15T09:00:00.000Z"
+  },
+  {
+    "id": "doc_pdpa_policy",
+    "title": "นโยบายการคุ้มครองข้อมูลส่วนบุคคล (PDPA Policy)",
+    "category": "ระเบียบบริษัท",
+    "targetType": "all",
+    "targetDepartment": "",
+    "targetEmployeeId": "",
+    "targetEmployeeName": "ทุกคน",
+    "fileName": "pdpa-policy-v2.pdf",
+    "fileUrl": "/uploads/documents/pdpa-policy-v2.pdf",
+    "fileSize": "850 KB",
+    "uploadedBy": "Legal & Compliance",
+    "acknowledgedBy": [],
+    "createdAt": "2026-02-01T10:30:00.000Z"
+  },
+  {
+    "id": "doc_welfare_benefit",
+    "title": "แบบฟอร์มการเบิกสวัสดิการค่ารักษาพยาบาลและทันตกรรม",
+    "category": "สวัสดิการ",
+    "targetType": "all",
+    "targetDepartment": "",
+    "targetEmployeeId": "",
+    "targetEmployeeName": "ทุกคน",
+    "fileName": "medical-claim-form-2026.xlsx",
+    "fileUrl": "/uploads/documents/medical-claim-form-2026.xlsx",
+    "fileSize": "320 KB",
+    "uploadedBy": "HR Benefits",
+    "acknowledgedBy": [],
+    "createdAt": "2026-03-10T14:15:00.000Z"
+  }
+]
