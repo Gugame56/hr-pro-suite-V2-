@@ -50,9 +50,9 @@ export class DateService {
     }
 
     // d/m/yyyy or d-m-yyyy (locale style). Year may be Buddhist (>= 2400).
-    const m = raw.match(/^(\d{1,2})[/\-.] (\d{1,2})[/\-.](\d{2,4})$/);
+    const m = raw.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
     if (m) {
-      let [, dd, mm, yyyy] = m;
+      const [, dd, mm, yyyy] = m;
       let year = parseInt(yyyy, 10);
       if (year >= 2400) year -= 543; // Buddhist -> Gregorian
       const d = new Date(year, parseInt(mm, 10) - 1, parseInt(dd, 10));

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 
 export async function POST(req: NextRequest) {
@@ -35,9 +35,21 @@ export async function POST(req: NextRequest) {
     // ทำความสะอาดชื่อไฟล์และตั้งชื่อใหม่เพื่อป้องกันการบันทึกทับ
     const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const uniqueFileName = `${Date.now()}-${cleanFileName}`;
-    const uploadPath = path.join(process.cwd(), "public/uploads/training", uniqueFileName);
+    const uploadDir = path.join(process.cwd(), "public/uploads/training");
+    const uploadPath = path.join(uploadDir, uniqueFileName);
 
-    await writeFile(uploadPath, buffer);
+    try {
+      await mkdir(uploadDir, { recursive: true });
+      await writeFile(uploadPath, buffer);
+    } catch (fsErr: any) {
+      if (fsErr.code === "EROFS" || fsErr.message?.includes("read-only")) {
+        return NextResponse.json(
+          { error: "เซิร์ฟเวอร์ Vercel เป็นระบบ Serverless Read-only ไม่รองรับการเขียนไฟล์ลงเครื่องโดยตรง กรุณาระบุเป็น Video URL" },
+          { status: 400 }
+        );
+      }
+      throw fsErr;
+    }
 
     const videoUrl = `/uploads/training/${uniqueFileName}`;
 

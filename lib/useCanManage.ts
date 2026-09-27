@@ -19,7 +19,8 @@ export function useCanManage(): boolean {
   useEffect(() => {
     try {
       const session = JSON.parse(localStorage.getItem("hr_session") || "{}");
-      setCan(canManage(session.role));
+      const nextCan = canManage(session.role);
+      setCan((prev) => (prev !== nextCan ? nextCan : prev));
     } catch {
       setCan(false);
     }
