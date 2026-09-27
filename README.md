@@ -1,868 +1,292 @@
-# 🏢 HR Pro Suite V2
+# 🏢 HR Pro Suite V3
 
-> **Enterprise Human Resource Management System (HRMS)**
-> ระบบบริหารจัดการทรัพยากรบุคคลแบบครบวงจร พัฒนาด้วย **Next.js + TypeScript + Tailwind CSS** และใช้ **Google Sheets API** เป็น Data Store
+> **Next-Gen HR OS** — ระบบบริหารทรัพยากรบุคคลครบวงจร สร้างด้วย Next.js 16 + Supabase (PostgreSQL) เป็น Backend
 
----
-
-## 📌 ภาพรวมโปรเจกต์
-
-**HR Pro Suite V2** คือระบบบริหารจัดการทรัพยากรบุคคลแบบ **All-in-One HRMS** ที่ออกแบบมาเพื่อรองรับกระบวนการทำงานของฝ่าย HR ตั้งแต่การจัดการข้อมูลพนักงาน การลงเวลา การลา เงินเดือน ไปจนถึงการประเมินผลและการออกเอกสาร
-
-ระบบถูกออกแบบด้วยแนวคิด **Clean Architecture / Layered Architecture** เพื่อให้แต่ละส่วนมีหน้าที่ชัดเจน แยก Business Logic ออกจาก Data Access และ Infrastructure ทำให้ระบบสามารถพัฒนาและดูแลต่อได้ง่าย
-
-### 🧩 Technology Overview
-
-| ส่วนประกอบ               | เทคโนโลยี                            |
-| ------------------------ | ------------------------------------ |
-| 🖥️ Frontend / Framework | Next.js — App Router                 |
-| 💻 Programming Language  | TypeScript                           |
-| 🎨 UI / Styling          | Tailwind CSS                         |
-| 🗄️ Database / Storage   | Google Sheets API v4                 |
-| ⚡ Caching                | In-Memory Cache Manager              |
-| 🔐 Authentication        | Custom JWT / Session                 |
-| 🛡️ Authorization        | RBAC                                 |
-| 📍 Location              | Google Places API / GPS / Geofencing |
-| 💬 Integration           | LINE OA                              |
-
----
-🌐 Live Demo / Production
-
-🔗 เข้าสู่ระบบ HR Pro Suite V2:
-https://hr-pro-suite-v2-beta.vercel.app/login
-
-
-# 🌟 Core Features
-
-ระบบครอบคลุมกระบวนการ HR มากกว่า **20 โมดูล** โดยแบ่งออกเป็นส่วนสำคัญดังนี้
-
-### 1️⃣ Dashboard & Overview
-
-📊 **`/app/page.tsx`**
-
-* ภาพรวมข้อมูลพนักงาน
-* สถิติการเข้างาน
-* สถิติการลา
-* ข้อมูลสำคัญสำหรับผู้บริหารและฝ่าย HR
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
+[![License](https://img.shields.io/badge/License-Private-red)](#)
 
 ---
 
-### 2️⃣ 👥 Employee Management
+## 📋 สารบัญ
 
-**`/employees` · `/departments` · `/positions`**
-
-* 👤 ข้อมูลส่วนตัวพนักงาน
-* 🏢 ข้อมูลแผนก
-* 💼 ตำแหน่งงาน
-* 📋 ประวัติการทำงาน
-* 🗂️ โครงสร้างองค์กร / Organization Chart
-
----
-
-### 3️⃣ ⏰ Attendance & Work Shifts
-
-**`/attendance` · `/shifts`**
-
-รองรับระบบบันทึกเวลาและการจัดการกะการทำงาน
-
-* 🕐 บันทึกเวลาเข้า–ออกงาน
-* 📍 ตรวจสอบ GPS / Geofencing
-* 🏢 ตรวจสอบว่าพนักงานอยู่ภายในรัศมีบริษัทหรือไม่
-* 🔄 จัดการ Work Shifts
+- [✨ ภาพรวม](#-ภาพรวม)
+- [🧩 ฟีเจอร์หลัก](#-ฟีเจอร์หลัก)
+- [🏗️ สถาปัตยกรรม](#️-สถาปัตยกรรม)
+- [📂 โครงสร้างโปรเจกต์](#-โครงสร้างโปรเจกต์)
+- [⚙️ การติดตั้งและเริ่มต้นใช้งาน](#️-การติดตั้งและเริ่มต้นใช้งาน)
+- [🔧 Environment Variables](#-environment-variables)
+- [📜 Scripts ที่มีให้ใช้งาน](#-scripts-ที่มีให้ใช้งาน)
+- [🛠️ Tech Stack](#️-tech-stack)
 
 ---
 
-### 4️⃣ 🏖️ Leave Management
+## ✨ ภาพรวม
 
-**`/leave` · `/leave-types`**
+**HR Pro Suite V3** คือระบบบริหารทรัพยากรบุคคล (HRMS) แบบ Web Application ที่ออกแบบมาสำหรับธุรกิจ SME ถึงขนาดกลาง โดยใช้ **Google Sheets** เป็นฐานข้อมูลหลัก ทำให้ไม่ต้องตั้งค่า Database Server แยก — เพียงแค่มี Google Account ก็สามารถเริ่มใช้งานได้ทันที
 
-* 📝 ยื่นคำขอลา
-* ✅ ระบบอนุมัติการลา
-* 📊 คำนวณวันลาคงเหลือ
-* ⚙️ กำหนดประเภทการลา
-* 🔐 กำหนดสิทธิ์และเงื่อนไขการลา
+เวอร์ชัน V3 ถูกเขียนใหม่ด้วยสถาปัตยกรรม **OOP (Object-Oriented Programming)** แบบ Layered Architecture เพื่อความเป็นระเบียบ ดูแลง่าย และขยายระบบได้ในอนาคต
 
 ---
 
-### 5️⃣ 🚗 Overtime & Business Trips
+## 🧩 ฟีเจอร์หลัก
 
-**`/overtime` · `/business-trips` · `/company-trips`**
+### 👥 People Management
+| ฟีเจอร์ | รายละเอียด |
+|---------|-----------|
+| **พนักงาน** | จัดการข้อมูลพนักงาน, สถานะ, ตำแหน่ง |
+| **แผนก** | สร้างและจัดการโครงสร้างแผนก |
+| **ตำแหน่ง** | กำหนดตำแหน่งงานและระดับ |
+| **สรรหา** | ติดตามกระบวนการรับสมัครพนักงานใหม่ |
 
-* ⏱️ คำนวณ OT
-* 💰 ขออนุมัติเบี้ยเลี้ยง
-* ✈️ จัดการการเดินทางไปปฏิบัติงาน
-* 📋 ติดตามสถานะคำขอ
+### ⏰ Time & Work
+| ฟีเจอร์ | รายละเอียด |
+|---------|-----------|
+| **การเข้างาน** | ลงเวลาเข้า-ออก รองรับ GPS และ QR Code |
+| **จัดกะ** | กำหนดกะการทำงาน |
+| **การลา** | ระบบขอลาพร้อมโควต้า รองรับลาเต็มวัน/รายชั่วโมง |
+| **โอที** | บันทึกและอนุมัติการทำงานล่วงเวลา |
 
----
+### 💰 Money
+| ฟีเจอร์ | รายละเอียด |
+|---------|-----------|
+| **เงินเดือน** | คำนวณ Payroll, ดึงข้อมูลวันลา/OT อัตโนมัติ |
+| **สวัสดิการ** | จัดการสวัสดิการพนักงาน |
+| **ประกันสังคม** | คำนวณเงินสมทบประกันสังคม |
+| **เงินกู้/เบิกล่วงหน้า** | ระบบเบิกเงินล่วงหน้าและเงินกู้ |
+| **เบิกค่าใช้จ่าย** | เบิกจ่ายค่าใช้จ่ายต่างๆ |
 
-### 6️⃣ 💰 Payroll & Benefits
+### 📈 Growth
+| ฟีเจอร์ | รายละเอียด |
+|---------|-----------|
+| **อบรม** | วางแผนและติดตามหลักสูตรอบรม |
+| **ปฐมนิเทศ** | กระบวนการ Onboarding พนักงานใหม่ |
+| **ประเมินผล** | ประเมินผลงาน KPI |
+| **รางวัล** | ระบบรางวัลและเชิดชูพนักงาน |
+| **ประกาศ** | ระบบประกาศข่าวภายในองค์กร |
+| **ทริปบริษัท** | จัดการทริปและกิจกรรมบริษัท |
+| **จัดประชุม** | จัดการห้องประชุมและวาระ |
 
-**`/payroll` · `/benefits` · `/loans` · `/social-security`**
-
-ระบบจัดการค่าตอบแทนและสวัสดิการ
-
-* 💵 คำนวณเงินเดือน
-* 🧾 คำนวณภาษี
-* 🏥 คำนวณประกันสังคม
-* 🔄 Sync ข้อมูลขาด / ลา / มาสาย / OT
-* 💳 จัดการเงินกู้ยืมพนักงาน
-* 🎁 จัดการสวัสดิการ
-
----
-
-### 7️⃣ 📈 Performance & Development
-
-**`/evaluations` · `/training` · `/rewards` · `/discipline`**
-
-* 🎯 KPI / Performance Evaluation
-* 📚 ประวัติการอบรม
-* ⚠️ บันทึกมาตรการทางวินัย
-* 📄 หนังสือเตือน
-* 🏆 ระบบรางวัลและการยกย่อง
-
----
-
-### 8️⃣ 🧑‍💼 Recruitment & Offboarding
-
-**`/recruitment` · `/onboarding` · `/resignations`**
-
-* 🔎 ติดตามกระบวนการ Recruitment
-* 📋 Onboarding Checklist
-* 👋 กระบวนการลาออก
-* 📦 Offboarding Process
-
----
-
-### 9️⃣ 📄 Documents & Certificates
-
-**`/documents`**
-
-รองรับการออกเอกสาร HR เช่น
-
-* 💰 Salary Certificate
-* 💼 Employment Certificate
-* 📄 เอกสารรับรองอื่น ๆ
+### 🔧 Operations & System
+| ฟีเจอร์ | รายละเอียด |
+|---------|-----------|
+| **ทรัพย์สิน** | จัดการอุปกรณ์และทรัพย์สินบริษัท |
+| **เอกสาร** | จัดเก็บเอกสารสำคัญ |
+| **เดินทางธุรกิจ** | บันทึกการเดินทางไปทำธุรกิจ |
+| **วินัย** | บันทึกการลงโทษทางวินัย |
+| **ลาออก** | กระบวนการลาออกและ Offboarding |
+| **รายงาน** | Dashboard และรายงานสรุป |
+| **LINE OA** | เชื่อมต่อ LINE Official Account |
+| **ตั้งค่าระบบ** | การตั้งค่าทั่วไป, สิทธิ์, และ Geofence |
 
 ---
 
-### 🔟 🔐 Security & Audit
+## 🏗️ สถาปัตยกรรม
 
-**`/settings` · `/lib/audit.ts`**
+โปรเจกต์ใช้ **Layered Architecture (OOP)** แบ่งเป็น 4 ชั้น:
 
-* 🛡️ Role-Based Access Control (RBAC)
-* 🔑 Authentication / Authorization
-* 📝 Audit Logs
-* 🔍 ตรวจสอบประวัติการเปลี่ยนแปลงข้อมูล
+```
+┌─────────────────────────────────────────────┐
+│              🖥️  App Layer                  │
+│         (Next.js Pages & API Routes)        │
+├─────────────────────────────────────────────┤
+│            🎮  Controllers                  │
+│   Request validation, response formatting   │
+├─────────────────────────────────────────────┤
+│            ⚙️  Services                     │
+│      Business logic & domain rules          │
+├─────────────────────────────────────────────┤
+│            💾  Repositories                 │
+│       Data access (Google Sheets)           │
+├─────────────────────────────────────────────┤
+│         🏗️  Infrastructure                  │
+│   GoogleSheetsClient, CacheManager          │
+└─────────────────────────────────────────────┘
+```
+
+| Layer | ตำแหน่ง | หน้าที่ |
+|-------|---------|--------|
+| **Models** | `lib/models/` | TypeScript interfaces สำหรับทุก entity |
+| **Infrastructure** | `lib/infrastructure/` | Google Sheets Client, Cache Manager |
+| **Repositories** | `lib/repositories/` | CRUD operations กับ Google Sheets |
+| **Services** | `lib/services/` | Business logic (Auth, Payroll, Geofence ฯลฯ) |
+| **Controllers** | `lib/controllers/` | จัดการ Request/Response ของ API Routes |
 
 ---
 
-# 🏗️ System Architecture
+## 📂 โครงสร้างโปรเจกต์
 
-ระบบใช้แนวคิด **Layered Architecture (N-Tier)** เพื่อแยกความรับผิดชอบของแต่ละ Layer อย่างชัดเจน
-
-```text
-┌───────────────────────────────────────┐
-│       🖥️ Client / React UI            │
-│          Browser                      │
-└───────────────────┬───────────────────┘
-                    │
-                    ▼
-┌───────────────────────────────────────┐
-│ 🌐 Presentation Layer                 │
-│ Next.js API Routes — app/api/*       │
-└───────────────────┬───────────────────┘
-                    │
-                    ▼
-┌───────────────────────────────────────┐
-│ 🎛️ Controller Layer                   │
-│ lib/controllers/*                     │
-│ BaseController / EmployeeController  │
-└───────────────────┬───────────────────┘
-                    │
-                    ▼
-┌───────────────────────────────────────┐
-│ 🧠 Service Layer                      │
-│ lib/services/*                        │
-│ Business Logic / Payroll / Geofence   │
-│ Audit                                  │
-└───────────────────┬───────────────────┘
-                    │
-                    ▼
-┌───────────────────────────────────────┐
-│ 🗂️ Repository Layer                   │
-│ lib/repositories/*                    │
-│ CRUD / Data Mapping                   │
-└───────────────────┬───────────────────┘
-                    │
-                    ▼
-┌───────────────────────────────────────┐
-│ ⚙️ Infrastructure Layer               │
-│ lib/infrastructure/*                  │
-│ GoogleSheetsClient / CacheManager     │
-└───────────────────┬───────────────────┘
-                    │
-                    ▼
-┌───────────────────────────────────────┐
-│ 📊 Google Sheets API                  │
-│ External Data Storage                 │
-└───────────────────────────────────────┘
+```
+hr-pro-suite/
+├── app/                          # Next.js App Router
+│   ├── api/                      # API Routes (30 modules)
+│   │   ├── employees/            
+│   │   ├── attendance/           
+│   │   ├── leave/                
+│   │   ├── payroll/              
+│   │   └── ...                   
+│   ├── employees/                # หน้า UI แต่ละโมดูล
+│   ├── attendance/               
+│   ├── leave/                    
+│   ├── payroll/                  
+│   ├── login/                    
+│   ├── ClientLayout.tsx          # Layout หลัก (Sidebar, Topbar)
+│   ├── page.tsx                  # หน้า Dashboard
+│   ├── layout.tsx                # Root Layout
+│   └── globals.css               
+├── lib/                          # Business Logic (OOP)
+│   ├── models/                   # Domain Models (TypeScript Interfaces)
+│   ├── infrastructure/           # GoogleSheetsClient, CacheManager
+│   ├── repositories/             # BaseRepository (CRUD)
+│   ├── services/                 # Business Services
+│   │   ├── AuthService.ts        
+│   │   ├── PayrollService.ts     
+│   │   ├── GeofenceService.ts    
+│   │   └── ...                   
+│   ├── controllers/              # API Controllers
+│   │   ├── BaseController.ts     
+│   │   ├── EmployeeController.ts 
+│   │   ├── AttendanceController.ts
+│   │   └── ...                   
+│   ├── googleSheets.ts           # Sheet connection utilities
+│   ├── sheetManager.ts           # Multi-sheet management
+│   ├── permissions.ts            # Role-based permissions
+│   └── navModules.ts             # Navigation config
+├── scripts/                      # Setup & Migration Scripts
+│   ├── setup-sheets.js           # สร้าง Sheet ทั้งหมดอัตโนมัติ
+│   ├── setup-attendance.js       # ตั้งค่าระบบ Attendance
+│   ├── seed-demo.js              # ข้อมูลตัวอย่าง Demo
+│   └── seed-users.js             # สร้างผู้ใช้เริ่มต้น
+├── public/                       # Static assets
+├── patches/                      # Dependency patches
+├── .env.local.example            # ตัวอย่าง Environment Variables
+├── package.json                  
+├── tsconfig.json                 
+└── next.config.ts                
 ```
 
 ---
 
-# 🛠️ Tech Stack
+## ⚙️ การติดตั้งและเริ่มต้นใช้งาน
 
-### 🖥️ Application
+### ข้อกำหนดเบื้องต้น
 
-* **Next.js** — App Router
-* **TypeScript**
-* **Tailwind CSS**
+- **Node.js** 18+ (แนะนำ 20+)
+- **Google Account** พร้อม Service Account Key (JSON)
+- **Google Sheets** ที่แชร์สิทธิ์ให้ Service Account
 
-### 🗄️ Data & Storage
-
-* **Google Sheets API v4**
-* In-Memory Cache Manager
-
-### 🔐 Authentication & Security
-
-* Custom JWT / Session
-* RBAC Guard
-* `lib/apiGuard.ts`
-* `lib/permissions.ts`
-
-### 🔗 External Integration
-
-* Google Places API
-* LINE OA Integration
-
----
-
-# 📁 Project Structure
-
-```text
-HR-Pro-Suite-V2/
-│
-├── 📁 app/
-│   ├── 📁 api/
-│   │   └── REST API Routes
-│   │
-│   ├── 📁 attendance/
-│   │   └── หน้าบันทึกเวลา
-│   │
-│   ├── 📁 employees/
-│   │   └── หน้าจัดการพนักงาน
-│   │
-│   ├── 📁 payroll/
-│   │   └── หน้าคำนวณเงินเดือน
-│   │
-│   └── .../
-│       └── โมดูล UI อื่น ๆ
-│
-├── 📁 lib/
-│   │
-│   ├── 📁 controllers/
-│   │   ├── BaseController.ts
-│   │   ├── EmployeeController.ts
-│   │   └── ...
-│   │
-│   ├── 📁 repositories/
-│   │   └── BaseRepository.ts
-│   │
-│   ├── 📁 services/
-│   │   ├── AuthService.ts
-│   │   ├── PayrollService.ts
-│   │   ├── GeofenceService.ts
-│   │   └── AuditService.ts
-│   │
-│   ├── 📁 infrastructure/
-│   │   ├── GoogleSheetsClient.ts
-│   │   └── CacheManager.ts
-│   │
-│   ├── 📁 models/
-│   │   └── TypeScript Interfaces / Entities
-│   │
-│   └── .../
-│       └── Utilities
-│
-├── 📁 scripts/
-│   ├── setup-sheets.js
-│   ├── seed-users.js
-│   └── seed-demo.js
-│
-└── 📄 SETUP_GUIDE.md
-```
-
----
-
-# 🚀 Getting Started
-
-## 1️⃣ Prerequisites
-
-ก่อนเริ่มต้นใช้งาน ตรวจสอบว่ามีสิ่งต่อไปนี้
-
-* 🟢 Node.js **18.x หรือสูงกว่า**
-* ☁️ Google Cloud Platform Account
-* 📊 เปิดใช้งาน **Google Sheets API**
-* 🔑 Service Account Credentials — JSON File
-
----
-
-## 2️⃣ 📦 Install Dependencies
+### ขั้นตอนการติดตั้ง
 
 ```bash
+# 1. Clone โปรเจกต์
+git clone https://github.com/Gugame56/hr-pro-suite-V2-.git
+cd hr-pro-suite
+
+# 2. ติดตั้ง Dependencies
 npm install
-```
 
----
+# 3. สร้างไฟล์ Environment Variables
+cp .env.local.example .env.local
+# จากนั้นแก้ไขค่าต่างๆ ในไฟล์ .env.local (ดูรายละเอียดด้านล่าง)
 
-## 3️⃣ 🔐 Environment Variables
+# 4. สร้าง Sheet ทั้งหมดใน Google Sheets (26 Sheets)
+npm run setup-sheets
 
-สร้างไฟล์ `.env.local` ที่ Root Directory
+# 5. ตั้งค่าระบบ Attendance
+npm run setup-attendance
 
-```env
-GOOGLE_SERVICE_ACCOUNT_EMAIL="your-service-account@project.iam.gserviceaccount.com"
-
-GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
-
-GOOGLE_SHEET_ID="your_google_sheet_id_here"
-
-JWT_SECRET="your-super-secret-jwt-key"
-```
-
-> ⚠️ **Security Note:** ห้าม Commit ไฟล์ `.env.local` หรือ Private Key ขึ้น Git Repository
-
----
-
-## 4️⃣ 📊 Setup Google Sheets
-
-### สร้าง Sheet และ Header
-
-```bash
-node scripts/setup-sheets.js
-```
-
-### 👤 สร้างผู้ใช้เริ่มต้น
-
-```bash
-node scripts/seed-users.js
-```
-
-### 🧪 สร้างข้อมูล Demo
-
-```bash
+# 6. (ทางเลือก) ใส่ข้อมูลตัวอย่าง Demo
 node scripts/seed-demo.js
-```
 
----
-
-## 5️⃣ ▶️ Run Development Server
-
-```bash
+# 7. เริ่มต้น Development Server
 npm run dev
 ```
 
-จากนั้นเปิด Browser ที่
-
-```text
-http://localhost:3000
-```
+เปิดเบราว์เซอร์ไปที่ [http://localhost:3000](http://localhost:3000)
 
 ---
 
-# 🧠 System Workflow
+## 🔧 Environment Variables
 
-## 🔄 Request → Response Lifecycle
+สร้างไฟล์ `.env.local` ในโฟลเดอร์หลักของโปรเจกต์:
 
-การทำงานของระบบตั้งแต่ผู้ใช้เริ่มทำรายการจนได้รับผลลัพธ์
+```env
+# Google Sheets Service Account
+GOOGLE_CLIENT_EMAIL=your-service-account@project.iam.gserviceaccount.com
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+SPREADSHEET_ID=your_spreadsheet_id_here
 
-### 1️⃣ Client Trigger
+# Google Maps (สำหรับแสดงแผนที่สำนักงาน — ฝั่ง Client)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_maps_api_key
 
-ผู้ใช้ทำรายการผ่านหน้าเว็บ เช่น
-
-* ⏰ Check-in ที่ `/attendance`
-* 🏖️ ขออนุมัติลาที่ `/leave`
-
-### 2️⃣ 🌐 API Route Entry
-
-Request ถูกส่งเข้าสู่ Next.js API Route เช่น
-
-```text
-app/api/attendance/route.ts
+# Google Places (สำหรับค้นหาสถานที่ — ฝั่ง Server)
+GOOGLE_PLACES_API_KEY=your_places_api_key
 ```
 
-### 3️⃣ 🎛️ Controller Handling
-
-API Route เรียกใช้งาน Controller เช่น
-
-```text
-AttendanceController
-```
-
-จากนั้น Controller จะเรียก `apiGuard.ts` เพื่อตรวจสอบ
-
-* 🔑 Authorization Token
-* 👤 User Role
-* 🛡️ Permission
-
-### 4️⃣ 🧠 Service Execution
-
-Controller ส่งข้อมูลต่อไปยัง Service ที่เกี่ยวข้อง
-
-ตัวอย่าง:
-
-```text
-GeofenceService
-```
-
-ใช้ตรวจสอบระยะห่างระหว่างพนักงานกับบริษัทด้วย GPS
-
-หรือ
-
-```text
-PayrollService
-```
-
-ใช้คำนวณ
-
-* เงินเดือน
-* ภาษี
-* ประกันสังคม
-* ขาดงาน
-* ลา
-* มาสาย
-* OT
-
-### 5️⃣ 🗂️ Repository & Infrastructure
-
-Service ติดต่อกับ Repository
-
-```text
-Service
-   ↓
-Repository
-   ↓
-GoogleSheetsClient
-   ↓
-Google Sheets API
-```
-
-โดยมี `CacheManager` ช่วยลดการเรียก Google Sheets API และป้องกันปัญหา **Rate Limit / Quota Exceeded**
-
-### 6️⃣ 📝 Audit & Response
-
-เมื่อดำเนินการสำเร็จ
-
-```text
-AuditService
-      ↓
-บันทึก Log
-      ↓
-Controller
-      ↓
-JSON Response
-      ↓
-Frontend
-```
+> **⚠️ สำคัญ:** อย่า commit ไฟล์ `.env.local` ขึ้น Git — ไฟล์นี้ถูก ignore ไว้แล้วใน `.gitignore`
 
 ---
 
-# 🧱 OOP Concepts in Action
+## 📜 Scripts ที่มีให้ใช้งาน
 
-โปรเจกต์นี้ใช้ **Object-Oriented Programming (OOP)** เป็นแนวทางหลักในการออกแบบ Backend ภายใน `lib/`
-
-โดยมีหลักการสำคัญ 4 ส่วน
-
----
-
-## 1️⃣ Inheritance — การสืบทอด
-
-ใช้เพื่อลดการเขียน Code ซ้ำตามหลัก
-
-> **DRY — Don't Repeat Yourself**
-
-### 🎛️ BaseController
-
-ไฟล์:
-
-```text
-lib/controllers/BaseController.ts
-```
-
-ทำหน้าที่เป็น Parent Class สำหรับ Controller ต่าง ๆ
-
-ตัวอย่าง Method:
-
-```typescript
-sendSuccess(data, message)
-
-sendError(error, statusCode)
-
-validateRequest(schema, body)
-```
-
-### 👶 Child Controllers
-
-```typescript
-EmployeeController extends BaseController
-
-AttendanceController extends BaseController
-
-LeaveController extends BaseController
-
-AuthController extends BaseController
-```
-
-ทำให้ Controller ลูกสามารถนำ Function มาตรฐานจาก `BaseController` มาใช้งานได้ทันที
+| คำสั่ง | รายละเอียด |
+|--------|-----------|
+| `npm run dev` | เริ่ม Development Server (Turbopack) |
+| `npm run build` | Build สำหรับ Production (Webpack) |
+| `npm run start` | รัน Production Server |
+| `npm run lint` | ตรวจสอบ Code ด้วย ESLint |
+| `npm run setup-sheets` | สร้าง Sheet ทั้งหมดใน Google Sheets |
+| `npm run setup-attendance` | ตั้งค่า Attendance Sheet |
+| `node scripts/seed-demo.js` | ใส่ข้อมูลตัวอย่าง Demo |
+| `node scripts/seed-users.js` | สร้าง User เริ่มต้น |
 
 ---
 
-### 🗂️ BaseRepository
+## 🛠️ Tech Stack
 
-ไฟล์:
-
-```text
-lib/repositories/BaseRepository.ts
-```
-
-เป็น Parent Class สำหรับ Data Access
-
-รองรับ CRUD เช่น
-
-```typescript
-findAll()
-
-findById(id)
-
-create(data)
-
-update(id, data)
-
-delete(id)
-```
-
-Repository ของแต่ละ Module สามารถนำ Function พื้นฐานเหล่านี้ไปใช้ต่อได้
+| เทคโนโลยี | เวอร์ชัน | หน้าที่ |
+|-----------|---------|--------|
+| **Next.js** | 16.2 | React Framework (App Router) |
+| **React** | 19.2 | UI Library |
+| **TypeScript** | 5.x | Type Safety |
+| **Tailwind CSS** | 4.x | Utility-first CSS |
+| **Google Sheets API** | googleapis v172 | Database Backend |
+| **Recharts** | 3.8 | Data Visualization |
+| **Lucide React** | 1.16 | Icon Library |
 
 ---
 
-# 2️⃣ 🎭 Abstraction — การซ่อนรายละเอียด
+## 🔑 สิทธิ์ผู้ใช้ (Roles)
 
-Abstraction คือการซ่อนความซับซ้อนภายในระบบ และเปิดให้ส่วนอื่นเรียกใช้งานผ่าน Method ที่เข้าใจง่าย
+ระบบรองรับ Role-based Access Control:
 
-### 📊 GoogleSheetsClient
-
-ไฟล์:
-
-```text
-lib/infrastructure/GoogleSheetsClient.ts
-```
-
-ซ่อนรายละเอียดของ Google Sheets API เช่น
-
-* A1 Notation
-* Range
-* Authentication
-* Service Account
-* Row / Column Mapping
-* Google API SDK
-
-ส่วนอื่นของระบบไม่จำเป็นต้องรู้รายละเอียดภายใน
-
-สามารถเรียกง่าย ๆ เช่น
-
-```typescript
-sheetsClient.readRows(sheetName)
-
-sheetsClient.appendRow(sheetName, values)
-```
+| Role | สิทธิ์ |
+|------|-------|
+| **superadmin** | สิทธิ์สูงสุด — เข้าถึงทุกฟีเจอร์และตั้งค่าระบบ |
+| **admin** | จัดการพนักงาน, อนุมัติคำขอ, ดูรายงาน |
+| **manager** | ดูแลทีม, อนุมัติการลา/OT ของลูกทีม |
+| **employee** | ดูข้อมูลตัวเอง, ส่งคำขอลา, ลงเวลา |
 
 ---
 
-### 📍 GeofenceService
+## 📄 เอกสารเพิ่มเติม
 
-ไฟล์:
-
-```text
-lib/services/GeofenceService.ts
-```
-
-ซ่อนการคำนวณระยะทางด้วย **Haversine Formula**
-
-ภายนอกสามารถเรียกเพียง
-
-```typescript
-geofenceService.isWithinRadius(
-  userLat,
-  userLng,
-  officeLat,
-  officeLng,
-  allowedRadiusMeters
-)
-```
-
-โดยไม่ต้องรู้ว่าภายในมีการคำนวณทางคณิตศาสตร์อย่างไร
+- 📘 [คู่มือการตั้งค่า Google Sheets](./SETUP_GUIDE.md) — ขั้นตอนละเอียดในการเชื่อมต่อ Google Sheets
 
 ---
 
-# 3️⃣ 🔒 Encapsulation — การห่อหุ้มข้อมูล
+## 🤝 การมีส่วนร่วม
 
-Encapsulation ใช้สำหรับป้องกัน Internal State ของ Object ไม่ให้ถูกแก้ไขโดยตรงจากภายนอก
-
-### ⚡ CacheManager
-
-ไฟล์:
-
-```text
-lib/infrastructure/CacheManager.ts
-```
-
-ตัวอย่างข้อมูลภายใน:
-
-```typescript
-private cache: Map<string, CacheEntry>
-```
-
-และค่า TTL จะถูกเก็บเป็น Internal State
-
-การเข้าถึงทำผ่าน Public Methods เช่น
-
-```typescript
-get(key)
-
-set(key, value, ttl)
-
-invalidate(key)
-```
-
-ช่วยควบคุมการเข้าถึงข้อมูล Cache ให้เป็นระบบ
+1. Fork โปรเจกต์
+2. สร้าง Branch ใหม่ (`git checkout -b feature/amazing-feature`)
+3. Commit การเปลี่ยนแปลง (`git commit -m 'Add amazing feature'`)
+4. Push ไปยัง Branch (`git push origin feature/amazing-feature`)
+5. เปิด Pull Request
 
 ---
 
-### 🔐 AuthService
-
-ใช้แนวคิดเดียวกันในการซ่อน
-
-* Password Hashing
-* Token Validation
-* Authentication Logic
-* Security Configuration
-
----
-
-# 4️⃣ 🔄 Polymorphism — หลายรูปแบบ
-
-Polymorphism ช่วยให้ Method หรือ Interface เดียวกันสามารถมีพฤติกรรมที่แตกต่างกันตาม Context
-
-### 🎛️ Method Overriding
-
-Controller ลูกสามารถ Override Method ที่กำหนดไว้ใน Parent Class ได้
-
-ตัวอย่าง:
-
-```text
-BaseController
-      ↓
-PayrollSyncController
-      ↓
-ReportsController
-```
-
-Controller เฉพาะทางสามารถเพิ่ม Logic สำหรับตรวจสอบสิทธิ์ เช่น
-
-```text
-ADMIN
-HR_MANAGER
-```
-
-ก่อนอนุญาตให้ดำเนินการ
-
----
-
-### 📤 Data Exporter Pattern
-
-ไฟล์:
-
-```text
-lib/exporters.ts
-```
-
-รองรับการ Export ข้อมูลหลายรูปแบบ เช่น
-
-* 📊 Excel
-* 📄 CSV
-* 📑 PDF
-
-โดยใช้ Interface กลางเพื่อกำหนดโครงสร้างการทำงาน
-
----
-
-# 🧩 OOP Design Patterns
-
-โปรเจกต์มีการประยุกต์ใช้ Design Pattern หลายรูปแบบ
-
----
-
-## 1️⃣ Repository Pattern
-
-📁 `lib/repositories/`
-
-ทำหน้าที่แยก
-
-```text
-Business Logic
-       ↕
-Data Access Logic
-```
-
-ออกจากกัน
-
-ข้อดีคือ หากในอนาคตเปลี่ยน Database จาก
-
-```text
-Google Sheets
-       ↓
-PostgreSQL / MongoDB
-```
-
-จะสามารถเปลี่ยนแปลงที่ Repository Layer เป็นหลัก โดยลดผลกระทบต่อ Service และ Controller
-
----
-
-## 2️⃣ 🧠 Service Layer Pattern
-
-📁 `lib/services/`
-
-รวบรวม Business Rules ไว้ในจุดเดียว
-
-ตัวอย่าง:
-
-### 💰 PayrollService
-
-ดูแล
-
-* เงินเดือน
-* OT
-* ขาดงาน
-* ลา
-* มาสาย
-* ภาษี
-* ประกันสังคม
-
-### 📝 AuditService
-
-ดูแล
-
-* Audit Logs
-* ประวัติการทำรายการ
-* การติดตามการเปลี่ยนแปลงข้อมูล
-
----
-
-## 3️⃣ ⚡ Singleton Pattern
-
-ใช้กับ Component ที่ต้องการ Instance เดียวตลอด Application Lifecycle เช่น
-
-```text
-GoogleSheetsClient
-CacheManager
-```
-
-ประโยชน์หลัก:
-
-* 💾 ลดการใช้ Memory
-* 📊 ควบคุม Google API Quota
-* 🔌 ควบคุม Connection
-* ⚡ ลดการสร้าง Object ซ้ำ
-
----
-
-# 🔗 Architecture Summary
-
-ภาพรวมการไหลของข้อมูลสามารถสรุปได้ดังนี้
-
-```text
-👤 User
-   │
-   ▼
-🖥️ React / Next.js UI
-   │
-   ▼
-🌐 API Route
-   │
-   ▼
-🎛️ Controller
-   │
-   ▼
-🧠 Service
-   │
-   ▼
-🗂️ Repository
-   │
-   ▼
-⚙️ Infrastructure
-   │
-   ├── ⚡ CacheManager
-   │
-   └── 📊 GoogleSheetsClient
-           │
-           ▼
-      📊 Google Sheets
-```
-
----
-
-# 🎯 Project Goals
-
-HR Pro Suite V2 ถูกออกแบบโดยมีเป้าหมายหลักคือ
-
-> **สร้างระบบ HRMS ที่มีโครงสร้างชัดเจน ขยายระบบได้ง่าย และแยกแต่ละความรับผิดชอบออกจากกันอย่างเป็นระบบ**
-
-### ⭐ จุดเด่นของ Architecture
-
-* 🧩 **Modular** — แยก Module ชัดเจน
-* 🧠 **Maintainable** — ดูแลและแก้ไขง่าย
-* 🔄 **Scalable** — รองรับการขยายระบบ
-* 🔐 **Secure** — มี Authentication / Authorization
-* 📊 **Data Abstraction** — ไม่ผูก Business Logic กับ Database โดยตรง
-* ⚡ **Performance** — มี Cache ลด API Calls
-* 📝 **Auditable** — มีระบบ Audit Logs
-* 🔌 **Extensible** — สามารถเปลี่ยน Data Store ในอนาคตได้
-
----
-
-# 🚀 Final Architecture
-
-```text
-                    🏢 HR PRO SUITE V2
-                           │
-        ┌──────────────────┴──────────────────┐
-        │                                     │
-        ▼                                     ▼
-   🖥️ FRONTEND                          🔐 SECURITY
-   Next.js / React                      JWT / RBAC
-        │                                     │
-        └──────────────────┬──────────────────┘
-                           ▼
-                    🌐 API ROUTES
-                           │
-                           ▼
-                    🎛️ CONTROLLERS
-                           │
-                           ▼
-                     🧠 SERVICES
-                           │
-                           ▼
-                    🗂️ REPOSITORIES
-                           │
-                           ▼
-                  ⚙️ INFRASTRUCTURE
-                    │            │
-                    ▼            ▼
-             ⚡ CACHE       📊 GOOGLE SHEETS
-                           │
-                           ▼
-                     📝 AUDIT LOG
-```
-
-> **HR Pro Suite V2 = HRMS + Clean Architecture + OOP + Google Sheets Data Store**
-
-เอกสารนี้สามารถใช้เป็น **Project README / Technical Documentation / Architecture Reference** สำหรับทีมพัฒนาและการต่อยอดระบบในอนาคตได้
+<p align="center">
+  สร้างด้วย ❤️ โดยทีม HR Pro Suite
+</p>

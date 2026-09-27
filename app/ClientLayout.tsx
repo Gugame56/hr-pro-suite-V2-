@@ -22,6 +22,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const pathname = usePathname();
   const router = useRouter();
   const isLoginPage = pathname === "/login";
+  const isRegisterPage = pathname === "/register-company";
+  const isPublicPage = isLoginPage || isRegisterPage;
   const [user, setUser] = useState<any>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [notifs, setNotifs] = useState<AppNotification[]>([]);
@@ -38,11 +40,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setUser(parsed);
       // โหลดแจ้งเตือนเฉพาะที่เกี่ยวกับ role ของผู้ใช้ (พนักงานเห็นแค่ของตัวเอง)
       setNotifs(notificationsFor(parsed.role));
-    } else if (!isLoginPage) {
-      // ถ้าไม่มี Session และไม่ใช่หน้า Login ให้ส่งกลับไปหน้า Login
+    } else if (!isPublicPage) {
+      // ถ้าไม่มี Session และไม่ใช่หน้า Public ให้ส่งกลับไปหน้า Login
       router.push("/login");
     }
-  }, [pathname, isLoginPage, router]);
+  }, [pathname, isPublicPage, router]);
 
   // Attach the signed-in user's role to every /api request so server-side route
   // guards (lib/apiGuard.ts) can enforce that only Admin/Manager may write managed
@@ -64,6 +66,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             );
             if (u.role) headers.set("x-role", String(u.role).toLowerCase());
             if (u.email) headers.set("x-actor", String(u.email));
+            if (u.companyCode) headers.set("x-company-code", String(u.companyCode));
+            if (u.id) headers.set("x-user-id", String(u.id));
             init = { ...init, headers };
           }
         }
@@ -117,7 +121,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     router.push("/login");
   };
 
-  if (isLoginPage) {
+  if (isPublicPage) {
     return <div className={inter.className}>{children}</div>;
   }
 
@@ -142,7 +146,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
               <span className="bg-brandPurple text-white p-1 rounded-md text-sm group-hover:bg-purple-600 transition-colors shrink-0">HR</span>
               HR Pro Suite
             </h1>
-            <p className="text-xs text-textMuted mt-1">NEXT-GEN HR OS</p>
+            {user.companyCode ? (
+              <p className="text-[10px] text-brandPurple font-bold mt-1 font-mono tracking-wider">{user.companyCode}</p>
+            ) : (
+              <p className="text-xs text-textMuted mt-1">NEXT-GEN HR OS</p>
+            )}
           </Link>
           {/* Close button — mobile only */}
           <button

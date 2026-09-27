@@ -5,7 +5,7 @@
 
 import { NextResponse } from 'next/server';
 
-export const MANAGER_ROLES = ['admin', 'manager'] as const;
+export const MANAGER_ROLES = ['admin', 'manager', 'company_admin'] as const;
 export type ManagerRole = (typeof MANAGER_ROLES)[number];
 
 export class AuthorizationService {

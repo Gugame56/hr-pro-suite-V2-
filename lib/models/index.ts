@@ -1,11 +1,13 @@
 // =============================================================================
 // HR Pro Suite — Domain Models
 // TypeScript interfaces สำหรับทุก entity ในระบบ
+// Updated: เพิ่ม companyCode ในทุก entity สำหรับ Multi-Tenant Data Isolation
 // =============================================================================
 
 /** ข้อมูลพนักงาน */
 export interface Employee {
   id?: string;
+  companyCode?: string;
   name?: string;
   nickname?: string;
   position?: string;
@@ -24,6 +26,7 @@ export interface Employee {
 /** บัญชีผู้ใช้ (ตาราง Users) */
 export interface User {
   id?: string;
+  companyCode?: string;
   email?: string;
   password?: string;
   role?: string;
@@ -39,6 +42,7 @@ export interface User {
 /** คำขอลา */
 export interface LeaveRequest {
   id?: string;
+  companyCode?: string;
   employeeId?: string;
   leaveType?: string;
   durationType?: 'fullday' | 'hourly';
@@ -55,6 +59,7 @@ export interface LeaveRequest {
 /** ประเภทการลา */
 export interface LeaveType {
   id?: string;
+  companyCode?: string;
   name: string;
   maxDays: number;
   paid: boolean;
@@ -80,6 +85,7 @@ export interface LeaveQuota {
 /** บันทึกเข้างาน */
 export interface AttendanceRecord {
   id?: string;
+  companyCode?: string;
   employeeId?: string;
   date?: string;
   checkIn?: string;
@@ -96,6 +102,7 @@ export interface AttendanceRecord {
 /** ข้อมูลเงินเดือน */
 export interface PayrollRecord {
   id?: string;
+  companyCode?: string;
   employeeId?: string;
   month?: string;
   year?: string;
@@ -111,6 +118,7 @@ export interface PayrollRecord {
 /** แผนก */
 export interface Department {
   id?: string;
+  companyCode?: string;
   name?: string;
   description?: string;
   manager?: string;
@@ -121,6 +129,7 @@ export interface Department {
 /** ตำแหน่ง */
 export interface Position {
   id?: string;
+  companyCode?: string;
   title?: string;
   grade?: string;
   description?: string;
@@ -137,10 +146,11 @@ export interface AuditLog {
   entityId?: string;
   changes?: any;
   timestamp?: string;
+  companyCode?: string;
   [key: string]: any;
 }
 
-/** Session ผู้ใช้ */
+/** Session ผู้ใช้ — รวม companyCode สำหรับ Multi-Tenant */
 export interface UserSession {
   id: string;
   employeeId: string;
@@ -149,6 +159,7 @@ export interface UserSession {
   name: string;
   position: string;
   avatar: string;
+  companyCode: string;
 }
 
 /** การตั้งค่า Attendance */
@@ -170,5 +181,6 @@ export interface VerifyResult {
 /** Generic row from Google Sheets */
 export interface SheetRow {
   _row?: number;
+  companyCode?: string;
   [key: string]: any;
 }

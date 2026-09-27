@@ -14,7 +14,7 @@
 // can be imported from both client components and API route handlers. The server
 // guard lives in `lib/apiGuard.ts`; the client hook in `lib/useCanManage.ts`.
 
-export const MANAGER_ROLES = ['admin', 'manager'] as const;
+export const MANAGER_ROLES = ['admin', 'manager', 'company_admin'] as const;
 
 export type ManagerRole = (typeof MANAGER_ROLES)[number];
 

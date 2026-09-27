@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldCheck, User, Lock, Mail, ArrowRight, Loader2 } from "lucide-react";
+import { ShieldCheck, User, Lock, Mail, ArrowRight, Loader2, Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
   const [role, setRole] = useState<"admin" | "employee">("employee");
+  const [companyCode, setCompanyCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,12 +19,16 @@ export default function LoginPage() {
     setIsLoading(true);
     setError("");
 
-    // ตรวจสอบกับ Google Sheets (ตาราง Users) ผ่าน API จริง
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, role }),
+        body: JSON.stringify({
+          email,
+          password,
+          role,
+          companyCode: companyCode.trim().toUpperCase() || undefined,
+        }),
       });
       const data = await res.json();
 
@@ -93,6 +98,22 @@ export default function LoginPage() {
                 {error}
               </div>
             )}
+
+            {/* Company Code Field */}
+            <div>
+              <label className="block text-[11px] font-bold text-[#9CA3AF] uppercase mb-1.5 ml-1 tracking-wider">รหัสบริษัท (Company Code)</label>
+              <div className="relative group">
+                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#8B5CF6] transition-colors" size={18} />
+                <input 
+                  type="text"
+                  value={companyCode}
+                  onChange={(e) => setCompanyCode(e.target.value.toUpperCase())}
+                  placeholder="เช่น CORP-8821"
+                  className="w-full bg-[#0B0E14]/50 border border-gray-800 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:outline-none focus:border-[#8B5CF6] transition-all text-white placeholder:text-gray-600 shadow-inner font-mono uppercase tracking-wider"
+                />
+              </div>
+              <p className="text-[10px] text-gray-600 ml-1 mt-1">ถ้าไม่มีรหัส สามารถเว้นว่างไว้สำหรับทดสอบระบบ</p>
+            </div>
             
             <div>
               <label className="block text-[11px] font-bold text-[#9CA3AF] uppercase mb-1.5 ml-1 tracking-wider">อีเมลผู้ใช้งาน</label>
@@ -144,6 +165,17 @@ export default function LoginPage() {
             </button>
           </form>
 
+          {/* Register Link */}
+          <div className="px-8 pb-4">
+            <Link
+              href="/register-company"
+              className="flex items-center justify-center gap-2 w-full py-3 bg-[#0B0E14]/50 border border-gray-800 rounded-2xl text-sm font-semibold text-[#8B5CF6] hover:text-white hover:bg-[#8B5CF6]/10 hover:border-[#8B5CF6]/40 transition-all"
+            >
+              <Building2 size={16} />
+              สมัครเปิดใช้งานระบบสำหรับบริษัทของคุณ
+            </Link>
+          </div>
+
           {/* Test Credentials Hint */}
           <div className="px-8 pb-8">
             <div className="bg-[#0B0E14]/30 border border-gray-800/50 rounded-2xl p-4 text-[10px]">
@@ -152,6 +184,7 @@ export default function LoginPage() {
                 <p><span className="text-white font-medium">Admin:</span> admin@hrpro.com / admin123</p>
                 <p><span className="text-white font-medium">Manager:</span> manager@hrpro.com / manager123</p>
                 <p><span className="text-white font-medium">User:</span> user@hrpro.com / user123</p>
+                <p className="text-gray-600 mt-1">* ไม่ต้องกรอกรหัสบริษัทสำหรับบัญชีทดสอบ</p>
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 // =============================================================================
-// AuthController — แปลงจาก app/api/auth/login/route.ts
-// Login logic with test accounts, password verification, audit logging
+// AuthController — Multi-Tenant Login with Company Code
+// Login logic with test accounts, company validation, password verification,
+// subscription expiry check, and audit logging
 // =============================================================================
 
 import { NextResponse } from 'next/server';
@@ -8,6 +9,7 @@ import { BaseRepository } from '../repositories/BaseRepository';
 import { AuthService } from '../services/AuthService';
 import { AuthorizationService } from '../services/AuthorizationService';
 import { AuditService } from '../services/AuditService';
+import { TenantService } from '../services/TenantService';
 
 export class AuthController {
   private static _instance: AuthController;
@@ -15,12 +17,14 @@ export class AuthController {
   private readonly authSvc: AuthService;
   private readonly authzSvc: AuthorizationService;
   private readonly auditSvc: AuditService;
+  private readonly tenantSvc: TenantService;
 
   constructor() {
     this.usersRepo = new BaseRepository('Users');
     this.authSvc = AuthService.getInstance();
     this.authzSvc = AuthorizationService.getInstance();
     this.auditSvc = AuditService.getInstance();
+    this.tenantSvc = TenantService.getInstance();
     this.handleLogin = this.handleLogin.bind(this);
   }
 
@@ -33,13 +37,13 @@ export class AuthController {
 
   async handleLogin(request: Request): Promise<NextResponse> {
     try {
-      const { email, password, role } = await request.json();
+      const { email, password, role, companyCode } = await request.json();
 
-      // Test account bypass
+      // ── Test account bypass (backward compatible — no companyCode required) ──
       const testAccounts: Record<string, any> = {
-        'admin@hrpro.com': { id: 'admin-test', employeeId: 'ADMIN-01', email: 'admin@hrpro.com', role: 'admin', name: 'System Administrator', position: 'Administrator', avatar: 'SA', password: 'admin123' },
-        'manager@hrpro.com': { id: 'manager-test', employeeId: 'MGR-01', email: 'manager@hrpro.com', role: 'manager', name: 'Team Manager', position: 'Manager', avatar: 'TM', password: 'manager123' },
-        'user@hrpro.com': { id: 'user-test', employeeId: 'EMP-01', email: 'user@hrpro.com', role: 'employee', name: 'Test Employee', position: 'Staff', avatar: 'TE', password: 'user123' },
+        'admin@hrpro.com': { id: 'admin-test', employeeId: 'ADMIN-01', email: 'admin@hrpro.com', role: 'admin', name: 'System Administrator', position: 'Administrator', avatar: 'SA', password: 'admin123', companyCode: 'DEMO-0001' },
+        'manager@hrpro.com': { id: 'manager-test', employeeId: 'MGR-01', email: 'manager@hrpro.com', role: 'manager', name: 'Team Manager', position: 'Manager', avatar: 'TM', password: 'manager123', companyCode: 'DEMO-0001' },
+        'user@hrpro.com': { id: 'user-test', employeeId: 'EMP-01', email: 'user@hrpro.com', role: 'employee', name: 'Test Employee', position: 'Staff', avatar: 'TE', password: 'user123', companyCode: 'DEMO-0001' },
       };
 
       const testAccount = testAccounts[email?.toLowerCase()];
@@ -48,14 +52,41 @@ export class AuthController {
         return NextResponse.json({ user });
       }
 
+      // ── Input validation ──
       if (!email || !password) {
         return NextResponse.json({ error: 'กรุณากรอกอีเมลและรหัสผ่าน' }, { status: 400 });
       }
 
+      // ── Company code validation (if provided) ──
+      let validatedCompanyCode = companyCode || '';
+
+      if (companyCode) {
+        const companyResult = await this.tenantSvc.validateCompany(companyCode);
+        if (!companyResult.valid) {
+          return NextResponse.json(
+            { error: companyResult.error },
+            { status: companyResult.errorCode || 403 },
+          );
+        }
+      }
+
+      // ── Find user ──
       const users = await this.usersRepo.getAll();
-      const user = users.find(
-        (u: any) => (u.email || '').trim().toLowerCase() === String(email).trim().toLowerCase(),
-      );
+      let user: any;
+
+      if (companyCode) {
+        // Multi-tenant: find user by email AND companyCode
+        user = users.find(
+          (u: any) =>
+            (u.email || '').trim().toLowerCase() === String(email).trim().toLowerCase() &&
+            (u.companyCode || '').toUpperCase() === companyCode.toUpperCase(),
+        );
+      } else {
+        // Backward compatible: find by email only (legacy single-tenant)
+        user = users.find(
+          (u: any) => (u.email || '').trim().toLowerCase() === String(email).trim().toLowerCase(),
+        );
+      }
 
       if (!user) {
         return NextResponse.json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
@@ -65,6 +96,7 @@ export class AuthController {
         return NextResponse.json({ error: 'บัญชีนี้ถูกระงับการใช้งาน' }, { status: 403 });
       }
 
+      // ── Verify password ──
       const { ok, needsRehash } = this.authSvc.verifyPassword(password, user.password);
       if (!ok) {
         return NextResponse.json({ error: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' }, { status: 401 });
@@ -82,6 +114,7 @@ export class AuthController {
 
       await this.auditSvc.log({ actor: user.email, action: 'LOGIN', entity: 'Users', entityId: user.id });
 
+      // ── Build session (include companyCode) ──
       const session = {
         id: user.id,
         employeeId: user.employeeId || user.id,
@@ -90,6 +123,7 @@ export class AuthController {
         name: user.name || user.email,
         position: user.position || '',
         avatar: user.avatar || (user.name ? user.name.slice(0, 2) : 'U'),
+        companyCode: user.companyCode || validatedCompanyCode || '',
       };
 
       return NextResponse.json({ user: session });

@@ -55,6 +55,15 @@ export class BaseController<T extends Record<string, any> = Record<string, any>>
     return request.headers.get('x-actor') || 'system';
   }
 
+  /** ดึง companyCode จาก request header หรือ searchParams */
+  protected getCompanyCode(request: Request): string {
+    const fromHeader = request.headers.get('x-company-code');
+    if (fromHeader) return fromHeader.trim().toUpperCase();
+    const { searchParams } = new URL(request.url);
+    const fromParam = searchParams.get('companyCode');
+    return fromParam ? fromParam.trim().toUpperCase() : '';
+  }
+
   /** ตรวจสอบสิทธิ์ manager — return NextResponse 403 ถ้าไม่ผ่าน */
   protected checkManager(request: Request): NextResponse | null {
     if (!this.options.requireManager) return null;
@@ -65,14 +74,24 @@ export class BaseController<T extends Record<string, any> = Record<string, any>>
   // Route Handlers
   // ---------------------------------------------------------------------------
 
-  /** GET — ดึงข้อมูลทั้งหมด หรือ filter ด้วย ?employeeId= หรือ ?id= */
+  /** GET — ดึงข้อมูลทั้งหมด หรือ filter ด้วย ?employeeId= หรือ ?id= พร้อม Tenant Data Isolation */
   async handleGet(request: Request): Promise<NextResponse> {
     try {
       const { searchParams } = new URL(request.url);
       const id = searchParams.get('id');
       const employeeId = searchParams.get('employeeId');
+      const companyCode = this.getCompanyCode(request);
 
-      const rows = (await this.repository.getAll()).map(BaseRepository.stripInternal);
+      let rows = (await this.repository.getAll()).map(BaseRepository.stripInternal);
+
+      // Data Isolation: คัดกรองเฉพาะข้อมูลของบริษัทตนเอง (ถ้ามีการส่งรหัสบริษัทมา)
+      if (companyCode) {
+        rows = rows.filter(
+          (r: any) =>
+            !r.companyCode ||
+            String(r.companyCode).trim().toUpperCase() === companyCode,
+        );
+      }
 
       if (id) {
         const found = rows.find((r: any) => r.id?.toString() === id);
@@ -98,14 +117,19 @@ export class BaseController<T extends Record<string, any> = Record<string, any>>
     }
   }
 
-  /** POST — สร้าง record ใหม่ */
+  /** POST — สร้าง record ใหม่ พร้อมบันทึก companyCode */
   async handlePost(request: Request): Promise<NextResponse> {
     const denied = this.checkManager(request);
     if (denied) return denied;
 
     try {
       const body = await request.json();
-      const data = { ...this.options.defaults, ...body };
+      const companyCode = this.getCompanyCode(request);
+      const data = {
+        ...this.options.defaults,
+        ...(companyCode ? { companyCode } : {}),
+        ...body,
+      };
       await this.repository.add(data);
 
       if (this.options.audit) {
@@ -140,6 +164,22 @@ export class BaseController<T extends Record<string, any> = Record<string, any>>
         return NextResponse.json({ error: 'id is required' }, { status: 400 });
       }
 
+      // ตรวจสอบ tenant ownership
+      const companyCode = this.getCompanyCode(request);
+      if (companyCode) {
+        const existing = await this.repository.getById(id);
+        if (
+          existing &&
+          existing.companyCode &&
+          String(existing.companyCode).trim().toUpperCase() !== companyCode
+        ) {
+          return NextResponse.json(
+            { error: 'ไม่มีสิทธิ์แก้ไขข้อมูลของบริษัทอื่น' },
+            { status: 403 },
+          );
+        }
+      }
+
       await this.repository.update(id, updatedData);
 
       if (this.options.audit) {
@@ -172,6 +212,22 @@ export class BaseController<T extends Record<string, any> = Record<string, any>>
       const id = searchParams.get('id');
       if (!id) {
         return NextResponse.json({ error: 'id is required' }, { status: 400 });
+      }
+
+      // ตรวจสอบ tenant ownership
+      const companyCode = this.getCompanyCode(request);
+      if (companyCode) {
+        const existing = await this.repository.getById(id);
+        if (
+          existing &&
+          existing.companyCode &&
+          String(existing.companyCode).trim().toUpperCase() !== companyCode
+        ) {
+          return NextResponse.json(
+            { error: 'ไม่มีสิทธิ์ลบข้อมูลของบริษัทอื่น' },
+            { status: 403 },
+          );
+        }
       }
 
       await this.repository.delete(id);
