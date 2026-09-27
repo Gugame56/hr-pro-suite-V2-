@@ -39,11 +39,11 @@ export class AuthController {
     try {
       const { email, password, role, companyCode } = await request.json();
 
-      // ── Test account bypass (backward compatible — no companyCode required) ──
+      // ── Test account bypass (backward compatible — linked to real employee data) ──
       const testAccounts: Record<string, any> = {
-        'admin@hrpro.com': { id: 'admin-test', employeeId: 'ADMIN-01', email: 'admin@hrpro.com', role: 'admin', name: 'System Administrator', position: 'Administrator', avatar: 'SA', password: 'admin123', companyCode: 'DEMO-0001' },
-        'manager@hrpro.com': { id: 'manager-test', employeeId: 'MGR-01', email: 'manager@hrpro.com', role: 'manager', name: 'Team Manager', position: 'Manager', avatar: 'TM', password: 'manager123', companyCode: 'DEMO-0001' },
-        'user@hrpro.com': { id: 'user-test', employeeId: 'EMP-01', email: 'user@hrpro.com', role: 'employee', name: 'Test Employee', position: 'Staff', avatar: 'TE', password: 'user123', companyCode: 'DEMO-0001' },
+        'admin@hrpro.com': { id: 'admin-test', employeeId: 'EMP-001', email: 'admin@hrpro.com', role: 'admin', name: 'ก้องภพ วัฒนกุล (Admin)', position: 'ผู้จัดการฝ่ายไอที', avatar: 'KP', password: 'admin123', companyCode: 'DEMO-0001' },
+        'manager@hrpro.com': { id: 'manager-test', employeeId: 'EMP-002', email: 'manager@hrpro.com', role: 'manager', name: 'ปิยะวรรณ ศรีสุข (Manager)', position: 'ผู้จัดการฝ่ายบุคคล', avatar: 'PW', password: 'manager123', companyCode: 'DEMO-0001' },
+        'user@hrpro.com': { id: 'user-test', employeeId: 'EMP-003', email: 'user@hrpro.com', role: 'employee', name: 'ธนกร อินทรา (Employee)', position: 'นักพัฒนาซอฟต์แวร์', avatar: 'TK', password: 'user123', companyCode: 'DEMO-0001' },
       };
 
       const testAccount = testAccounts[email?.toLowerCase()];

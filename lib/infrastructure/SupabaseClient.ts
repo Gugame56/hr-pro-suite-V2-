@@ -14,14 +14,11 @@ export class SupabaseClient {
   private readonly ttlMs = 8000;
 
   private constructor() {
-    this.baseUrl = process.env.SUPABASE_URL || '';
-    this.apiKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
-    if (!this.baseUrl || !this.apiKey) {
-      console.warn(
-        '[SupabaseClient] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local',
-      );
-    }
+    this.baseUrl = process.env.SUPABASE_URL || 'https://vruancgpqtdhaauugwme.supabase.co';
+    this.apiKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_KEY ||
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZydWFuY2dwcXRkaGFhdXVnd21lIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDQ0MzQxMCwiZXhwIjoyMTA2MDE5NDEwfQ.hJ87cPGBZrX-lobJ3BYkfN2CP7GlIO81_pkIZd8MOXg';
   }
 
   /** Singleton instance */
@@ -125,39 +122,40 @@ export class SupabaseClient {
   async insert(table: string, data: Record<string, any>): Promise<Record<string, any>> {
     const cleanData = this.cleanRecord(data);
 
-    const res = await fetch(`${this.baseUrl}/rest/v1/${table}`, {
-      method: 'POST',
-      headers: this.headers({ Prefer: 'return=minimal' }),
-      body: JSON.stringify(cleanData),
-    });
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const res = await fetch(`${this.baseUrl}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: this.headers({ Prefer: 'return=minimal' }),
+        body: JSON.stringify(cleanData),
+      });
 
-    if (!res.ok) {
+      if (res.ok) {
+        this.invalidateCache(table);
+        return cleanData;
+      }
+
       const errText = await res.text();
 
-      // Handle serial id columns: if text id causes type error, retry without id
+      // 1. Missing column in schema: strip the offending column and retry
+      const missingColMatch = errText.match(/Could not find the '([^']+)' column/);
+      if (missingColMatch && missingColMatch[1]) {
+        delete cleanData[missingColMatch[1]];
+        continue;
+      }
+
+      // 2. Serial id conflict: strip id and retry
       if (
         cleanData.id &&
-        typeof cleanData.id === 'string' &&
-        (errText.includes('invalid input syntax') || errText.includes('violates'))
+        (errText.includes('invalid input syntax') || errText.includes('violates') || errText.includes('type integer'))
       ) {
-        const { id, ...withoutId } = cleanData;
-        const retryRes = await fetch(`${this.baseUrl}/rest/v1/${table}`, {
-          method: 'POST',
-          headers: this.headers({ Prefer: 'return=minimal' }),
-          body: JSON.stringify(withoutId),
-        });
-        if (!retryRes.ok) {
-          throw new Error(`[Supabase] INSERT ${table}: ${await retryRes.text()}`);
-        }
-        this.invalidateCache(table);
-        return withoutId;
+        delete cleanData.id;
+        continue;
       }
 
       throw new Error(`[Supabase] INSERT ${table}: ${errText}`);
     }
 
-    this.invalidateCache(table);
-    return cleanData;
+    throw new Error(`[Supabase] INSERT ${table}: Maximum retries exceeded`);
   }
 
   /** Update a row by primary key */
@@ -168,23 +166,36 @@ export class SupabaseClient {
     idKey = 'id',
   ): Promise<void> {
     const cleanData = this.cleanRecord(data);
-    // Don't include the primary key in the update body
     delete cleanData[idKey];
 
-    const res = await fetch(
-      `${this.baseUrl}/rest/v1/${table}?${encodeURIComponent(idKey)}=eq.${encodeURIComponent(idValue)}`,
-      {
-        method: 'PATCH',
-        headers: this.headers({ Prefer: 'return=minimal' }),
-        body: JSON.stringify(cleanData),
-      },
-    );
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const res = await fetch(
+        `${this.baseUrl}/rest/v1/${table}?${encodeURIComponent(idKey)}=eq.${encodeURIComponent(idValue)}`,
+        {
+          method: 'PATCH',
+          headers: this.headers({ Prefer: 'return=minimal' }),
+          body: JSON.stringify(cleanData),
+        },
+      );
 
-    if (!res.ok) {
-      throw new Error(`[Supabase] UPDATE ${table}: ${await res.text()}`);
+      if (res.ok) {
+        this.invalidateCache(table);
+        return;
+      }
+
+      const errText = await res.text();
+
+      // Strip unknown column and retry
+      const missingColMatch = errText.match(/Could not find the '([^']+)' column/);
+      if (missingColMatch && missingColMatch[1]) {
+        delete cleanData[missingColMatch[1]];
+        continue;
+      }
+
+      throw new Error(`[Supabase] UPDATE ${table}: ${errText}`);
     }
 
-    this.invalidateCache(table);
+    throw new Error(`[Supabase] UPDATE ${table}: Maximum retries exceeded`);
   }
 
   /** Delete a row by primary key */
