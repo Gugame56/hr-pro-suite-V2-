@@ -276,6 +276,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                   <Link href="/documents" className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${pathname === "/documents" ? "text-brandPurple bg-brandPurple/10" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}>
                     <FileText size={18} /> เอกสาร
                   </Link>
+                  <Link href="/documents/employment-cert" className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${pathname === "/documents/employment-cert" ? "text-brandPurple bg-brandPurple/10" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}>
+                    <FileText size={18} /> ขอใบรับรองการทำงาน
+                  </Link>
+                  <Link href="/documents/salary-cert" className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${pathname === "/documents/salary-cert" ? "text-brandPurple bg-brandPurple/10" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}>
+                    <FileText size={18} /> ขอใบรับรองเงินเดือน
+                  </Link>
                   <Link href="/business-trips" className={`flex items-center gap-3 px-3 py-2 rounded-lg font-medium transition-colors ${pathname === "/business-trips" ? "text-brandPurple bg-brandPurple/10" : "text-gray-400 hover:text-white hover:bg-gray-800"}`}>
                     <BriefcaseBusiness size={18} /> เดินทางธุรกิจ
                   </Link>

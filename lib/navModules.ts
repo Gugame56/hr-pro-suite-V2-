@@ -43,6 +43,8 @@ export const NAV_MODULES: NavModule[] = [
   { label: "จัดประชุม", href: "/meetings", icon: Presentation, group: "Growth", keywords: "meeting agenda ประชุม" },
   { label: "ทรัพย์สิน", href: "/assets", icon: Laptop, group: "Operations", keywords: "asset equipment" },
   { label: "เอกสาร", href: "/documents", icon: FileText, group: "Operations", keywords: "document file" },
+  { label: "ขอใบรับรองการทำงาน", href: "/documents/employment-cert", icon: FileText, group: "Operations", keywords: "employment certificate รับรองการทำงาน ใบรับรอง" },
+  { label: "ขอใบรับรองเงินเดือน", href: "/documents/salary-cert", icon: FileText, group: "Operations", keywords: "salary certificate รับรองเงินเดือน ใบรับรอง" },
   { label: "เดินทางธุรกิจ", href: "/business-trips", icon: BriefcaseBusiness, group: "Operations", keywords: "business trip travel" },
   { label: "วินัย", href: "/discipline", icon: AlertTriangle, group: "Operations", keywords: "discipline" },
   { label: "ลาออก", href: "/resignations", icon: LogOut, group: "Operations", keywords: "resignation" },
